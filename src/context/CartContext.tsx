@@ -86,26 +86,30 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const agregarAlCarrito = (producto: Producto, cantidad: number) => {
-    const listaActual = cliente ? cliente.lista_asignada : 3;
-    
-    const precio = 
-      listaActual === 1 ? producto.precio_lista_1 :
-      listaActual === 2 ? producto.precio_lista_2 : 
-      producto.precio_lista_3;
+  const listaActual = cliente ? cliente.lista_asignada : 3;
+  
+  const precioBase = 
+    listaActual === 1 ? producto.precio_lista_1 :
+    listaActual === 2 ? producto.precio_lista_2 : 
+    producto.precio_lista_3;
 
-    setCart((prevCart) => {
-      const itemExiste = prevCart.find((item) => item.producto.id === producto.id);
+  // Si se vende por Horma o Pieza, multiplicamos el precio base del kilo por el peso estimado (3.5kg)
+  const esVentaPorPeso = producto.unidad_medida.toLowerCase() === 'horma' || producto.unidad_medida.toLowerCase() === 'pieza';
+  const precioFinalCalculado = esVentaPorPeso ? (precioBase * 3.5) : precioBase;
 
-      if (itemExiste) {
-        return prevCart.map((item) =>
-          item.producto.id === producto.id
-            ? { ...item, cantidad: item.cantidad + cantidad }
-            : item
-        );
-      }
-      return [...prevCart, { producto, cantidad, precioAplicado: precio }];
-    });
-  };
+  setCart((prevCart) => {
+    const itemExiste = prevCart.find((item) => item.producto.id === producto.id);
+
+    if (itemExiste) {
+      return prevCart.map((item) =>
+        item.producto.id === producto.id
+          ? { ...item, cantidad: item.cantidad + cantidad }
+          : item
+      );
+    }
+    return [...prevCart, { producto, cantidad, precioAplicado: precioFinalCalculado }];
+  });
+};
 
   const eliminarDelCarrito = (productoId: number) => {
     setCart((prevCart) => prevCart.filter((item) => item.producto.id !== productoId));

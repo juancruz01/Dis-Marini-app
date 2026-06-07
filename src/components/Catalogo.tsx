@@ -171,12 +171,21 @@ export default function Catalogo() {
                 </div>
 
                 {/* Precio y Controles de Carrito */}
-                <div className="flex flex-col items-end justify-between h-full min-w-[100px] gap-3">
+                <div className="flex flex-col items-end justify-between h-full min-w-[120px] gap-3">
                   <div className="text-right">
-                    <span className="text-xs text-gray-400 block font-bold uppercase tracking-wider text-[9px]">Tu Precio</span>
+                    <span className="text-[9px] text-gray-400 block font-bold uppercase tracking-wider">
+                      Precio por {producto.unidad_medida}
+                    </span>
                     <span className="text-xl font-black text-brand-dark">
                       ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
+                    
+                    {/* ¡DETALLE DE ORO! Si es Horma o Pieza, le mostramos el valor estimado de la pieza */}
+                    {(producto.unidad_medida.toLowerCase() === 'horma' || producto.unidad_medida.toLowerCase() === 'pieza') && (
+                      <span className="block text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 border border-amber-100">
+                        Aprox: ${(precioFinal * 3.5).toLocaleString('es-AR')} x pieza (3.5kg)
+                      </span>
+                    )}
                   </div>
 
                   {/* Botones de acción */}
@@ -185,7 +194,7 @@ export default function Catalogo() {
                       onClick={() => agregarAlCarrito(producto, 1)}
                       className="bg-brand-blue text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-brand-dark active:scale-[0.97] transition-all flex items-center gap-1 shadow-md shadow-brand-blue/10 uppercase tracking-wider"
                     >
-                      <span>+</span> Agregar
+                      <span>+</span> Agregar {producto.unidad_medida.toLowerCase() === 'horma' ? 'Horma' : 'U.'}
                     </button>
                   ) : (
                     <div className="flex items-center bg-gray-100 rounded-xl border border-gray-200 p-0.5 shadow-inner">
