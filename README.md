@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Distribuidora Marini - Sistema de Catálogo y Pedidos Mayoristas
 
-## Getting Started
+Una aplicación web diseñada específicamente para una distribuidora de fiambres y lácteos. Este sistema permite a los comercios mayoristas o minoristas consultar el stock en tiempo real y realizar pedidos a través de WhatsApp.
 
-First, run the development server:
+Además, cuenta con un panel de administración restringido y blindado para la gestión del catálogo, precios y control de clientes habilitados.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Características Principales
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 📱 Experiencia del Cliente (Frontend)
+* **Autenticación por numero de cliente:** Acceso rápido y simplificado sin contraseñas engorrosas, ideal para el flujo diario de almacenes y fiambrerías.
+* **Precios Dinámicos por Volumen:** El catálogo renderiza automáticamente los precios de la **Lista 1, 2 o 3** según el perfil que el administrador le haya asignado al comercio en la base de datos.
+* **Módulo de invitados(no clientes):** Permite el ingreso a usuarios nuevos (Lista 3) exigiéndoles datos de contacto (nombre, dirección, teléfono) únicamente al momento de pasar por el checkout.
+* **Carrito de Compras Optimizado:** Control de cantidades por Kilo, Horma o Unidad, con cálculo estimado del total sujeto a balanza.
+* **Integración con WhatsApp:** Envío automatizado del pedido con formato profesional y limpio directo al chat de la distribuidora.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### ⚙️ Panel de Control (Administración)
+* **Acceso Seguro (Supabase Auth):** Panel blindado bajo inicio de sesión con correo y contraseña exclusivos para el dueño del negocio.
+* **Gestión de Catálogo en Tiempo Real:** Alta, edición, baja y pausa de stock inmediato de productos con asignación paralela para las tres listas de precios mayoristas.
+* **Control de Clientes:** Altas y bajas de comercios adheridos y re-asignación de tarifas de precios con un solo clic.
+* **Interfaz Autoadaptable (Responsive UI):** Menús y modales adaptados mediante lógica de hamburguesa para que el dueño opere el negocio cómodamente desde su celular con datos móviles.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Stack Tecnológico
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+* **Framework:** [Next.js 16](https://nextjs.org/) (App Router & Turbopack)
+* **Lenguaje:** [TypeScript](https://www.typescript.org/) (Tipado estricto libre de `any`)
+* **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
+* **Base de Datos & Seguridad:** [Supabase](https://supabase.com/) (PostgreSQL)
+* **Seguridad de Datos:** Row Level Security (RLS) policies en Postgres para blindar escrituras públicas.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🔒 Arquitectura de Seguridad (RLS)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Para garantizar la integridad del negocio frente a inspecciones maliciosas en el cliente, la base de datos implementa las siguientes directivas de seguridad a nivel de fila:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+* **Tabla `productos` & `clientes` (SELECT):** Acceso público (`anon`) y autenticado, permitiendo que la app valide códigos y renderice el catálogo sin trabas.
+* **Tabla `productos` & `clientes` (INSERT, UPDATE, DELETE):** Restringido exclusivamente al rol `authenticated`. Cualquier petición de modificación externa es rechazada en milisegundos por el motor de Supabase si no proviene de la sesión del administrador.
+
+---
