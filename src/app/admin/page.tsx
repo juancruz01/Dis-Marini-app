@@ -13,7 +13,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function cargarMetricas() {
       try {
-        // Consultamos la cantidad de filas en ambas tablas
+
         const { count: countProd } = await supabase.from('productos').select('*', { count: 'exact', head: true });
         const { count: countCli } = await supabase.from('clientes').select('*', { count: 'exact', head: true });
 

@@ -9,11 +9,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Registramos los colores de Distribuidora Marini
         brand: {
-          dark: "#003057",   // Azul Marino Principal
-          blue: "#057EDD",   // Azul Brillante de acento
-          light: "#F4F8FC",  // Un fondo sutil celeste/grisáceo para matizar
+          dark: "#003057",
+          blue: "#057EDD",
+          light: "#F4F8FC",
         }
       },
     },

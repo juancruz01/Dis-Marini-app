@@ -5,7 +5,6 @@ import { supabase } from '../../../lib/supabase';
 import AdminNav from '../../../components/AdminNav';
 import { useRouter } from 'next/navigation';
 
-// Definimos la interfaz local para el Cliente de la base de datos
 interface ClienteDB {
   id: number;
   numero_cliente: string;
@@ -29,7 +28,7 @@ export default function GestionClientes() {
   const [listaAsignada, setListaAsignada] = useState(3);
   const [telefono, setTelefono] = useState('');
 
-  // 1. Validar sesión de administrador
+  // Validar sesión de administrador
   useEffect(() => {
     async function verificarSesion() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -43,7 +42,7 @@ export default function GestionClientes() {
     verificarSesion();
   }, [router]);
 
-  // 2. Traer todos los clientes ordenados por nombre de comercio
+  // Traer todos los clientes ordenados por nombre de comercio
   async function cargarClientes() {
     try {
       const { data, error } = await supabase
@@ -60,7 +59,7 @@ export default function GestionClientes() {
     }
   }
 
-  // 3. Limpiar formulario para nuevo cliente
+  // Limpiar formulario para nuevo cliente
   const abrirAlta = () => {
     setIdEditando(null);
     // Sugerimos un número de cliente al azar de 4 dígitos para agilizar, el admin puede cambiarlo
@@ -72,7 +71,7 @@ export default function GestionClientes() {
     setModalAbierto(true);
   };
 
-  // 4. Cargar datos para edición
+  // Cargar datos para edición
   const abrirEdicion = (c: ClienteDB) => {
     setIdEditando(c.id);
     setNumeroCliente(c.numero_cliente);
@@ -82,7 +81,7 @@ export default function GestionClientes() {
     setModalAbierto(true);
   };
 
-  // 5. Guardar o Actualizar Cliente
+  // Guardar o Actualizar Cliente
   const guardarCliente = async (e: React.FormEvent) => {
     e.preventDefault();
     setCargando(true);
@@ -103,7 +102,7 @@ export default function GestionClientes() {
           .eq('id', idEditando);
         if (error) throw error;
       } else {
-        // Validar primero que el código de cliente no esté repetido
+        // Valido primero que el código de cliente no esté repetido
         const { data: existe } = await supabase
           .from('clientes')
           .select('id')
@@ -133,7 +132,7 @@ export default function GestionClientes() {
     }
   };
 
-  // 6. Eliminar Cliente (Baja de la distribuidora)
+  // Eliminar Cliente (Baja de la distribuidora)
   const eliminarCliente = async (id: number, nombre: string) => {
     if (!confirm(`¿Está seguro de que desea eliminar al comercio "${nombre}"? Ya no podrá loguearse a la aplicación.`)) return;
     setCargando(true);

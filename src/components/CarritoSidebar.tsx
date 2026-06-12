@@ -5,6 +5,23 @@ import { useCart } from '../context/CartContext';
 import Image from 'next/image';
 import ModalCheckout from './ModalCheckout';
 
+const ImagenCarrito = ({ id, nombre }: { id: number; nombre: string }) => {
+  //Estado para la ruta de la imagen
+  const [imgSrc, setImgSrc] = useState(`/Productos/Cremosos/${id}.png`);
+
+  return (
+    <Image
+      src={imgSrc}
+      alt={nombre}
+      fill
+      sizes="56px"
+      className="object-cover"
+      // Si falla la carga
+      onError={() => setImgSrc('/Productos/placeholder.jpg')}
+    />
+  );
+};
+
 interface CarritoSidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,7 +35,7 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Fondo oscuro con desenfoque al abrir */}
+      {/* fondo oscuro que hace un desenfoque al abrir */}
       <div 
         className="absolute inset-0 bg-brand-dark/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
@@ -28,7 +45,7 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
         {/* Contenedor del panel lateral */}
         <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col">
           
-          {/* ENCABEZADO DEL CARRITO */}
+          {/* TITUL DEL CARRITO */}
           <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-brand-dark text-white">
             <div>
               <h2 className="text-lg font-black tracking-tight">Tu Pedido</h2>
@@ -50,7 +67,7 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
               <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 gap-2">
                 <span className="text-4xl">🛒</span>
                 <p className="text-sm font-medium">El carrito está vacío.</p>
-                <p className="text-xs max-w-[200px]">Agregá fiambres o lácteos desde el catálogo para empezar.</p>
+                <p className="text-xs max-w-50">Agregá fiambres o lácteos desde el catálogo para empezar.</p>
               </div>
             ) : (
               cart.map((item) => (
@@ -59,22 +76,12 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
                   className="bg-white border border-gray-200/60 rounded-xl p-3 flex items-center gap-3 relative shadow-xs"
                 >
                   {/* Miniatura de imagen */}
-                  <div className="w-14 h-14 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center text-xl relative border border-gray-100">
-                    {item.producto.imagen_url && item.producto.imagen_url !== 'https://via.placeholder.com/150' ? (
-                      <Image 
-                        src={item.producto.imagen_url} 
-                        alt={item.producto.nombre} 
-                        fill
-                        sizes="56px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      '🧀'
-                    )}
+                  <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shrink-0 relative border border-gray-200">
+                    <ImagenCarrito id={item.producto.id} nombre={item.producto.nombre} />
                   </div>
 
                   {/* Detalle del producto */}
-                  <div className="flex-grow min-w-0">
+                  <div className="grow min-w-0">
                     <h4 className="font-bold text-sm text-brand-dark truncate leading-tight">
                       {item.producto.nombre}
                     </h4>
@@ -88,7 +95,7 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
                   </div>
 
                   {/* Controles de cantidad e importe total por ítem */}
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <div className="flex flex-col items-end gap-2 shrink-0">
                     <button 
                       onClick={() => eliminarDelCarrito(item.producto.id)}
                       className="text-gray-300 hover:text-red-500 text-xs p-1 transition"
@@ -134,7 +141,7 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
               </div>
 
                 <button
-                    onClick={() => setCheckoutAbierto(true)} // <-- Cambiado aquí
+                    onClick={() => setCheckoutAbierto(true)}
                     className="w-full bg-brand-blue text-white font-bold py-4 rounded-xl hover:bg-brand-dark active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-brand-blue/20 text-sm uppercase tracking-wider"
                     >
                     Confirmar Pedido ➔
@@ -148,7 +155,7 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
                 isOpen={checkoutAbierto} 
                 onClose={() => {
                     setCheckoutAbierto(false);
-                    onClose(); // Cierra también el sidebar del carrito para limpiar la pantalla
+                    onClose();
                 }} 
             />
     </div>

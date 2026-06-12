@@ -53,7 +53,7 @@ export default function ModalIngreso() {
     <div className="fixed inset-0 bg-brand-dark/40 backdrop-blur-md flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-100 relative overflow-hidden">
         
-        {/* Detalle estético superior con el color de acento */}
+
         <div className="absolute top-0 left-0 right-0 h-2 bg-brand-blue" />
 
         {/* Encabezado */}
@@ -63,7 +63,7 @@ export default function ModalIngreso() {
           </div>
           <h2 className="text-2xl font-black text-brand-dark tracking-tight">Distribuidora Marini</h2>
           <p className="text-gray-500 text-sm mt-2 px-2">
-            Portal exclusivo para comercios. Ingrese sus datos para operar con su tarifa asignada.
+            Exclusivo para comercios. Ingrese sus datos para operar con su tarifa asignada.
           </p>
         </div>
 
@@ -104,9 +104,9 @@ export default function ModalIngreso() {
 
         {/* Separador */}
         <div className="relative flex py-5 items-center">
-          <div className="flex-grow border-t border-gray-100"></div>
-          <span className="flex-shrink mx-4 text-gray-400 text-[10px] font-bold uppercase tracking-widest">Nuevos Clientes</span>
-          <div className="flex-grow border-t border-gray-100"></div>
+          <div className="grow border-t border-gray-100"></div>
+          <span className="shrink mx-4 text-gray-400 text-[10px] font-bold uppercase tracking-widest">Nuevos Clientes</span>
+          <div className="grow border-t border-gray-100"></div>
         </div>
 
         {/* Botón Invitado */}

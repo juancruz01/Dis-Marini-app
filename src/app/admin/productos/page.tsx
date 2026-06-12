@@ -25,7 +25,7 @@ export default function GestionProductos() {
   const [stock, setStock] = useState(true);
   const [infoAdicional, setInfoAdicional] = useState('');
 
-  // 1. Validar sesión de administrador
+  // Validar sesión de administrador
   useEffect(() => {
     async function verificarSesion() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -39,7 +39,7 @@ export default function GestionProductos() {
     verificarSesion();
   }, [router]);
 
-  // 2. Traer todos los productos (incluyendo los pausados sin stock)
+  // Traer todos los productos (incluyendo los pausados sin stock)
   async function cargarProductos() {
     try {
       const { data, error } = await supabase
@@ -56,7 +56,7 @@ export default function GestionProductos() {
     }
   }
 
-  // 3. Limpiar formulario y abrir modal para nuevo producto
+  // Limpiar formulario y abrir modal para nuevo producto
   const abrirAlta = () => {
     setIdEditando(null);
     setNombre('');
@@ -71,7 +71,7 @@ export default function GestionProductos() {
     setModalAbierto(true);
   };
 
-  // 4. Cargar datos del producto para edición
+  // Cargar datos del producto para edición
   const abrirEdicion = (p: Producto) => {
     setIdEditando(p.id);
     setNombre(p.nombre);
@@ -101,7 +101,7 @@ export default function GestionProductos() {
       precio_lista_3: Number(precio3),
       stock_disponible: stock,
       informacion_adicional: infoAdicional.trim() || null,
-      imagen_url: 'https://via.placeholder.com/150' // Placeholder por defecto
+      imagen_url: 'https://via.placeholder.com/150'
     };
 
     try {

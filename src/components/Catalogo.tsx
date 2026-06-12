@@ -131,23 +131,30 @@ export default function Catalogo() {
                 key={producto.id} 
                 className="bg-white border border-gray-200/60 rounded-xl p-4 flex items-center gap-4 hover:shadow-md hover:border-gray-300/80 transition-all duration-200 relative overflow-hidden"
               >
+                
                 {/* Imagen del Producto */}
-                <div className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0 overflow-hidden border border-gray-100 flex items-center justify-center text-2xl relative">
-                    {producto.imagen_url && producto.imagen_url !== 'https://via.placeholder.com/150' ? (
-                        <Image 
-                        src={producto.imagen_url} 
-                        alt={producto.nombre} 
-                        fill
-                        sizes="80px"
-                        className="object-cover"
-                        />
-                    ) : (
-                        '🧀' // Emoji por defecto si no hay foto real
-                    )}
+                <div className="w-20 h-20 bg-gray-100 rounded-xl shrink-0 overflow-hidden border border-gray-100 flex items-center justify-center text-2xl relative">
+                  <Image 
+                    // AGREGAMOS la barra '/' entre Cremosos y el ID
+                    src={`/Productos/Cremosos/${producto.id}.png`} 
+                    alt={producto.nombre} 
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      
+                      // Clausura de seguridad: si el placeholder también falla, evitamos el bucle infinito
+                      if (target.src.includes('placeholder')) return; 
+                      
+                      // Intentamos cargar un placeholder genérico (asegurate de que exista o poné una ruta válida)
+                      target.src = '/Productos/placeholder.jpg'; 
+                    }}
+                  />
                 </div>
 
                 {/* Info del Producto */}
-                <div className="flex-grow min-w-0">
+                <div className="grow min-w-0">
                   <div className="flex items-start justify-between gap-1">
                     <h4 className="font-bold text-brand-dark text-base truncate leading-tight">
                       {producto.nombre}
@@ -171,7 +178,7 @@ export default function Catalogo() {
                 </div>
 
                 {/* Precio y Controles de Carrito */}
-                <div className="flex flex-col items-end justify-between h-full min-w-[120px] gap-3">
+                <div className="flex flex-col items-end justify-between h-full min-w-30 gap-3">
                   <div className="text-right">
                     <span className="text-[9px] text-gray-400 block font-bold uppercase tracking-wider">
                       Precio por {producto.unidad_medida}

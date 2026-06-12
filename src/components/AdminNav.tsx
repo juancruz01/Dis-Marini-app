@@ -18,7 +18,7 @@ export default function AdminNav() {
     <nav className="bg-brand-dark text-white shadow-xl relative z-50">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-6xl">
         
-        {/* LOGO / TÍTULO */}
+        {/* LOGO */}
         <div className="flex items-center gap-2">
           <span className="text-lg">⚙️</span>
           <h1 className="font-black text-base tracking-tight whitespace-nowrap">
@@ -26,7 +26,7 @@ export default function AdminNav() {
           </h1>
         </div>
         
-        {/* BOTÓN HAMBURGUESA (Solo visible en Móviles) */}
+        {/* boton hamburguesa (Solo visible para celulares) */}
         <button
           onClick={() => setMenuAbierto(!menuAbierto)}
           className="md:hidden p-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/5 transition focus:outline-none"
@@ -37,7 +37,7 @@ export default function AdminNav() {
           </span>
         </button>
 
-        {/* MENÚ ESCRITORIO (Oculto en móviles, horizontal en md+) */}
+        {/* menu escritorio (Oculto en celulares) */}
         <div className="hidden md:flex items-center gap-2">
           {enlaces.map((link) => {
             const activo = pathname === link.href;
@@ -67,7 +67,7 @@ export default function AdminNav() {
         </div>
       </div>
 
-      {/* MENÚ DESPLEGABLE MÓVIL (Solo visible si menuAbierto es true y en pantallas chicas) */}
+      {/* menu desplegable (Solo visible si menuAbierto es true y en pantallas chicas) */}
       {menuAbierto && (
         <div className="md:hidden bg-brand-dark border-t border-white/10 absolute top-full left-0 w-full shadow-2xl animate-in slide-in-from-top duration-200">
           <div className="px-4 py-3 flex flex-col gap-2 bg-brand-dark/95 backdrop-blur-md">
@@ -77,7 +77,7 @@ export default function AdminNav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => setMenuAbierto(false)} // Cierra el menú al hacer clic
+                  onClick={() => setMenuAbierto(false)}
                   className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                     activo
                       ? 'bg-brand-blue text-white shadow-md'

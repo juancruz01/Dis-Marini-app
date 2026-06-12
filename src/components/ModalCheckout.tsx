@@ -11,30 +11,27 @@ interface ModalCheckoutProps {
 export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
   const { cart, obtenerTotal, cliente, limpiarCarrito } = useCart();
   
-  // Estados estándar del formulario
+  //Estados estándar del formulario
   const [metodoEntrega, setMetodoEntrega] = useState('Reparto');
   const [comentarios, setComentarios] = useState('');
   const [enviando, setEnviando] = useState(false);
 
-  // NUEVOS ESTADOS: Exclusivos para clientes nuevos / invitados
+  //ESTADOS: Exclusivos para clientes nuevos / invitados
   const [nombreInvitado, setNombreInvitado] = useState('');
   const [telefonoInvitado, setTelefonoInvitado] = useState('');
   const [direccionInvitado, setDireccionInvitado] = useState('');
 
   if (!isOpen || !cliente) return null;
 
-  // Evaluamos si el cliente actual es un invitado (ej: código 9999 o el que uses para Invitados públicos)
-  // O si simplemente su nombre_comercio es "Invitado"
+  // Evaluamos si el cliente actual es un invitado
   const esInvitado = cliente.numero_cliente === '9999' || cliente.nombre_comercio.toLowerCase().includes('invitado');
 
   const enviarPorWhatsApp = (e: React.FormEvent) => {
     e.preventDefault();
     setEnviando(true);
 
-    // Número de teléfono de la Distribuidora (Formato internacional)
     const telefonoDistribuidora = '541159320255'; 
 
-    // 1. Construir el encabezado del mensaje adaptado
     let mensaje = `*📦 NUEVO PEDIDO - DISTRIBUIDORA MARINI*\n`;
     mensaje += `-------------------------------------------\n`;
     
@@ -94,7 +91,7 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
 
         <form onSubmit={enviarPorWhatsApp} className="space-y-4 text-xs">
           
-          {/* CAMPOS EXCLUSIVOS PARA INVITADOS */}
+          {/* CAMPOS EXCLUSIVOS PARA INVITADOS(no clientes) */}
           {esInvitado && (
             <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-xl space-y-3">
               <span className="block font-black text-amber-800 text-[10px] uppercase tracking-wider">

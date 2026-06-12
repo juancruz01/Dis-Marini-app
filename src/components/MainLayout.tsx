@@ -6,7 +6,6 @@ import { useCart } from '../context/CartContext';
 import Catalogo from '../components/Catalogo';
 import CarritoSidebar from '../components/CarritoSidebar';
 
-// Acá adentro Next.js permite el ssr: false perfectamente porque ya es un componente hijo del cliente
 const ModalIngresoSinSSR = dynamic(() => import('../components/ModalIngreso'), {
   ssr: false,
 });
@@ -20,17 +19,17 @@ export default function MainLayout() {
   
   return (
     <>
-      {/* 1. Modal de entrada (Cargado dinámicamente solo en el cliente) */}
+      {/*Modal de entrada (Cargado dinámicamente solo en el cliente) */}
       <ModalIngresoSinSSR />
 
-      {/* 2. Contenido de la Web (Solo visible si el cliente ya ingresó) */}
+      {/*Contenido de la Web (Solo visible si el cliente ya ingresó) */}
       {cliente && (
         <>
-          {/* Navbar Corporativa */}
+          {/* Navbar*/}
           <nav className="bg-brand-dark text-white sticky top-0 z-40 shadow-xl border-b border-white/10">
             <div className="container mx-auto px-4 py-3 flex justify-between items-center">
               
-              {/* LADO IZQUIERDO: LOGO (Siempre visible) */}
+              {/* lado izquierdo "LOGO" (Siempre visible) */}
               <div className="flex items-center gap-2">
                 <span className="text-brand-blue text-xl">■</span>
                 <div>
@@ -43,7 +42,7 @@ export default function MainLayout() {
                 </div>
               </div>
               
-              {/* LADO DERECHO: ESCRITORIO (Visible en md+) */}
+              {/* lado deerecho "escritorio"*/}
               <div className="hidden md:flex items-center gap-4">
                 <div className="text-right border-r border-white/10 pr-4">
                   <p className="text-xs text-white font-bold">{cliente.nombre_comercio}</p>
@@ -74,9 +73,8 @@ export default function MainLayout() {
                 </button>
               </div>
 
-              {/* LADO DERECHO: MÓVIL (Botón Hamburguesa) */}
+              {/* lado derecho: celular (Botón Hamburguesa) */}
               <div className="md:hidden flex items-center gap-3">
-                {/* Acceso directo al carrito siempre visible (opcional, pero recomendado para ventas) */}
                 {cantidadItems > 0 && (
                   <button 
                     onClick={() => setCarritoAbierto(true)}
@@ -98,7 +96,7 @@ export default function MainLayout() {
               </div>
             </div>
 
-            {/* MENÚ DESPLEGABLE MÓVIL */}
+            {/* menu desplegable mobile */}
             {menuMovilAbierto && (
               <div className="md:hidden bg-brand-dark border-t border-white/10 animate-in slide-in-from-top duration-200">
                 <div className="p-5 space-y-4 bg-brand-dark/95 backdrop-blur-md">
@@ -145,7 +143,7 @@ export default function MainLayout() {
             <Catalogo />
           </main>
           
-          {/* BOTÓN FLOTANTE DE CARRITO PARA MÓVILES (Abajo a la derecha) */}
+          {/* boton flotante del carrito - para mobile - */}
           {cantidadItems > 0 && (
             <button
               onClick={() => setCarritoAbierto(true)}
@@ -158,7 +156,7 @@ export default function MainLayout() {
             </button>
           )}
 
-          {/* PANEL LATERAL DEL CARRITO */}
+          {/* panel lateral del carrito */}
           <CarritoSidebar 
             isOpen={carritoAbierto} 
             onClose={() => setCarritoAbierto(false)} 

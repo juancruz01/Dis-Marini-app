@@ -7,11 +7,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '*.supabase.co', // Autoriza todas las imágenes guardadas en buckets de Supabase
+        hostname: '*.supabase.co',
       },
       {
         protocol: 'https',
-        hostname: 'via.placeholder.com', // Autoriza los placeholders de prueba
+        hostname: 'via.placeholder.com',
       }
     ],
   },
