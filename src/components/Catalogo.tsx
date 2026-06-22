@@ -187,7 +187,7 @@ export default function Catalogo() {
                       ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
                     
-                    {/* ¡DETALLE DE ORO! Si es Horma o Pieza, le mostramos el valor estimado de la pieza */}
+                    {/*Si es Horma o Pieza, le mostramos el valor estimado de la pieza */}
                     {(producto.unidad_medida.toLowerCase() === 'horma' || producto.unidad_medida.toLowerCase() === 'pieza') && (
                       <span className="block text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 border border-amber-100">
                         Aprox: ${(precioFinal * 3.5).toLocaleString('es-AR')} x pieza (3.5kg)
