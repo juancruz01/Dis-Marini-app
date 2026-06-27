@@ -12,6 +12,7 @@ export default function AdminNav() {
     { name: '📊 Resumen', href: '/admin' },
     { name: '🧀 Productos', href: '/admin/productos' },
     { name: '👥 Clientes', href: '/admin/clientes' },
+    { name: '📋 Historial', href: '/admin/historial' }
   ];
 
   return (
