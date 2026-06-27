@@ -1,6 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface Producto {
   id: number;
@@ -40,108 +42,144 @@ interface CartContextType {
   obtenerTotal: () => number;
 }
 
+// ─── Helpers de sessionStorage ────────────────────────────────────────────────
+
+const KEYS = {
+  carrito: 'distribuidora_carrito',
+  cliente: 'distribuidora_cliente',
+} as const;
+
+function leerSession<T>(key: string): T | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function guardarSession(key: string, value: unknown): void {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // sessionStorage puede fallar en modo privado con cuota llena
+  }
+}
+
+function eliminarSession(key: string): void {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    // silent
+  }
+}
+
+// ─── Contexto ─────────────────────────────────────────────────────────────────
+
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
-  
+  // ✅ Siempre iniciamos con valores vacíos/null en el servidor Y en el cliente.
+  // El typeof window !== 'undefined' en el inicializador de useState causaba
+  // hydration mismatch: servidor devolvía [] pero cliente leía sessionStorage.
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cliente, setCliente] = useState<ClienteActivo | null>(null);
 
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    if (typeof window !== 'undefined') {
-      const carritoGuardado = sessionStorage.getItem('distribuidora_carrito');
-      return carritoGuardado ? JSON.parse(carritoGuardado) : [];
-    }
-    return [];
-  });
-  
+  // ✅ Cargamos sessionStorage una sola vez, después de la hidratación.
+  useEffect(() => {
+    const carritoGuardado = leerSession<CartItem[]>(KEYS.carrito);
+    const clienteGuardado = leerSession<ClienteActivo>(KEYS.cliente);
 
-  const [cliente, setCliente] = useState<ClienteActivo | null>(() => {
-    if (typeof window !== 'undefined') {
-      const clienteGuardado = sessionStorage.getItem('distribuidora_cliente');
-      return clienteGuardado ? JSON.parse(clienteGuardado) : null;
-    }
-    return null;
-  });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (carritoGuardado) setCart(carritoGuardado);
+    if (clienteGuardado) setCliente(clienteGuardado);
+  }, []);
 
-
+  // ✅ Persistimos el carrito cada vez que cambia (pero no en el primer render vacío)
   useEffect(() => {
     if (cart.length > 0) {
-      sessionStorage.setItem('distribuidora_carrito', JSON.stringify(cart));
+      guardarSession(KEYS.carrito, cart);
     } else {
-      sessionStorage.removeItem('distribuidora_carrito');
+      eliminarSession(KEYS.carrito);
     }
   }, [cart]);
 
-  const definirCliente = (numero: string, nombre: string, lista: number) => {
-    const nuevoCliente = {
+  // ─── Acciones ──────────────────────────────────────────────────────────────
+
+  const definirCliente = useCallback((numero: string, nombre: string, lista: number) => {
+    const nuevoCliente: ClienteActivo = {
       numero_cliente: numero,
       nombre_comercio: nombre,
       lista_asignada: lista,
     };
-
-    sessionStorage.setItem('distribuidora_cliente', JSON.stringify(nuevoCliente));
+    guardarSession(KEYS.cliente, nuevoCliente);
     setCliente(nuevoCliente);
-    
     setCart([]);
-    sessionStorage.removeItem('distribuidora_carrito');
-  };
+    eliminarSession(KEYS.carrito);
+  }, []);
 
-  const agregarAlCarrito = (producto: Producto, cantidad: number) => {
-  const listaActual = cliente ? cliente.lista_asignada : 3;
-  
-  const precioBase = 
-    listaActual === 1 ? producto.precio_lista_1 :
-    listaActual === 2 ? producto.precio_lista_2 : 
-    producto.precio_lista_3;
+  const agregarAlCarrito = useCallback((producto: Producto, cantidad: number) => {
+    setCart((prevCart) => {
+      // Resolvemos el precio dentro del setter para tener acceso al cliente más reciente
+      // a través del closure, sin necesidad de declararlo como dependencia.
+      const listaActual = cliente?.lista_asignada ?? 3;
 
-  // Si se vende por Horma o Pieza - el precio base del kilo por el peso estimado (3.5kg)
-  const esVentaPorPeso = producto.unidad_medida.toLowerCase() === 'horma' || producto.unidad_medida.toLowerCase() === 'pieza';
-  const precioFinalCalculado = esVentaPorPeso ? (precioBase * 3.5) : precioBase;
+      const precioBase =
+        listaActual === 1 ? producto.precio_lista_1 :
+        listaActual === 2 ? producto.precio_lista_2 :
+        producto.precio_lista_3;
 
-  setCart((prevCart) => {
-    const itemExiste = prevCart.find((item) => item.producto.id === producto.id);
+      const esVentaPorPeso =
+        producto.unidad_medida.toLowerCase() === 'horma' ||
+        producto.unidad_medida.toLowerCase() === 'pieza';
 
-    if (itemExiste) {
-      return prevCart.map((item) =>
-        item.producto.id === producto.id
-          ? { ...item, cantidad: item.cantidad + cantidad }
-          : item
-      );
-    }
-    return [...prevCart, { producto, cantidad, precioAplicado: precioFinalCalculado }];
-  });
-};
+      const precioFinalCalculado = esVentaPorPeso ? precioBase * 3.5 : precioBase;
 
-  const eliminarDelCarrito = (productoId: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.producto.id !== productoId));
-  };
+      const itemExiste = prevCart.find((item) => item.producto.id === producto.id);
 
-  const actualizarCantidad = (productoId: number, cantidad: number) => {
+      if (itemExiste) {
+        return prevCart.map((item) =>
+          item.producto.id === producto.id
+            ? { ...item, cantidad: item.cantidad + cantidad }
+            : item
+        );
+      }
+
+      return [...prevCart, { producto, cantidad, precioAplicado: precioFinalCalculado }];
+    });
+  }, [cliente]);
+
+  const eliminarDelCarrito = useCallback((productoId: number) => {
+    setCart((prev) => prev.filter((item) => item.producto.id !== productoId));
+  }, []);
+
+  const actualizarCantidad = useCallback((productoId: number, cantidad: number) => {
     if (cantidad <= 0) {
       eliminarDelCarrito(productoId);
       return;
     }
-    setCart((prevCart) =>
-      prevCart.map((item) =>
+    setCart((prev) =>
+      prev.map((item) =>
         item.producto.id === productoId ? { ...item, cantidad } : item
       )
     );
-  };
+  }, [eliminarDelCarrito]);
 
-  const limpiarCarrito = () => {
+  const limpiarCarrito = useCallback(() => {
     setCart([]);
-    sessionStorage.removeItem('distribuidora_carrito');
-  };
+    eliminarSession(KEYS.carrito);
+  }, []);
 
-  const cerrarSesion = () => {
-  setCart([]);
-  setCliente(null);
-  sessionStorage.removeItem('distribuidora_carrito');
-  sessionStorage.removeItem('distribuidora_cliente');
-};
+  const cerrarSesion = useCallback(() => {
+    setCart([]);
+    setCliente(null);
+    eliminarSession(KEYS.carrito);
+    eliminarSession(KEYS.cliente);
+  }, []);
 
-  const obtenerTotal = () => {
+  const obtenerTotal = useCallback(() => {
     return cart.reduce((acc, item) => acc + item.precioAplicado * item.cantidad, 0);
-  };
+  }, [cart]);
 
   return (
     <CartContext.Provider
@@ -161,6 +199,8 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     </CartContext.Provider>
   );
 };
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export const useCart = () => {
   const context = useContext(CartContext);

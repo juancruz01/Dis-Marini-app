@@ -1,23 +1,59 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, {  useEffect ,useState } from 'react';
 import { useCart } from '../context/CartContext';
 import Image from 'next/image';
 import ModalCheckout from './ModalCheckout';
+import { getPresignedUrl } from '../services/mediaService';
 
-const ImagenCarrito = ({ id, nombre }: { id: number; nombre: string }) => {
-  //Estado para la ruta de la imagen
-  const [imgSrc, setImgSrc] = useState(`/Productos/Cremosos/${id}.png`);
+const ImagenCarrito = ({
+  imagenKey,
+  nombre,
+}: {
+  imagenKey: string | null;
+  nombre: string;
+}) => {
+  const placeholder = '/productos/placeholder.jpg';
+
+  // 1. Calculamos si el producto tiene una imagen válida de forma síncrona
+  const tieneImagenValida = imagenKey && !imagenKey.includes('placeholder');
+
+  // 2. Si no es válida, el estado inicial ya es el placeholder definitivo. 
+  // Si es válida, arranca en placeholder temporal hasta que resuelva la URL firmada.
+  const [urlFinal, setUrlFinal] = useState(placeholder);
+
+  useEffect(() => {
+    // 🚀 LA CLAVE: Si no es válida, salimos al toque. 
+    // Ya NO llamamos a setUrlFinal(placeholder) acá adentro, evitando el error del linter.
+    if (!tieneImagenValida) {
+      return;
+    }
+
+    let activo = true;
+
+    getPresignedUrl(imagenKey)
+      .then((url) => {
+        if (activo && url) setUrlFinal(url);
+      })
+      .catch((err) => {
+        console.error("Error al obtener URL firmada en carrito:", err);
+        // Si falla la promesa (asíncrono), el linter SÍ te deja usar el setState
+        if (activo) setUrlFinal(placeholder); 
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [imagenKey, tieneImagenValida]); // Agregamos las dependencias correctas
 
   return (
     <Image
-      src={imgSrc}
+      src={urlFinal}
       alt={nombre}
       fill
       sizes="56px"
       className="object-cover"
-      // Si falla la carga
-      onError={() => setImgSrc('/Productos/placeholder.jpg')}
+      unoptimized
     />
   );
 };
@@ -31,26 +67,32 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
   const { cart, actualizarCantidad, eliminarDelCarrito, obtenerTotal, cliente } = useCart();
   const [checkoutAbierto, setCheckoutAbierto] = useState(false);
 
+  // 🌟 SOLUCIÓN DEFINITIVA: Verificamos si estamos en el navegador sin usar useEffect ni useState
+  const estaEnElCliente = typeof window !== 'undefined';
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* fondo oscuro que hace un desenfoque al abrir */}
+      {/* Fondo oscuro con desenfoque */}
       <div 
         className="absolute inset-0 bg-brand-dark/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       <div className="absolute inset-y-0 right-0 pl-10 max-w-full flex">
-        {/* Contenedor del panel lateral */}
         <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col">
           
-          {/* TITUL DEL CARRITO */}
+          {/* TÍTULO DEL CARRITO */}
           <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-brand-dark text-white">
             <div>
               <h2 className="text-lg font-black tracking-tight">Tu Pedido</h2>
               <p className="text-xs text-gray-300 mt-0.5">
-                Precios calculados con <span className="text-brand-blue font-bold">Lista {cliente?.lista_asignada}</span>
+                Precios calculados con:{' '}
+                <span className="text-brand-blue font-bold">
+                  {/* Si está en el cliente muestra la lista, sino el placeholder para SSR */}
+                  Lista {estaEnElCliente && cliente?.lista_asignada ? cliente.lista_asignada : '...'}
+                </span>
               </p>
             </div>
             <button 
@@ -77,8 +119,12 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
                 >
                   {/* Miniatura de imagen */}
                   <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shrink-0 relative border border-gray-200">
-                    <ImagenCarrito id={item.producto.id} nombre={item.producto.nombre} />
+                    <ImagenCarrito
+                      imagenKey={item.producto.imagen_url}
+                      nombre={item.producto.nombre}
+                    />
                   </div>
+                  
 
                   {/* Detalle del producto */}
                   <div className="grow min-w-0">
@@ -94,7 +140,7 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
                     </p>
                   </div>
 
-                  {/* Controles de cantidad e importe total por ítem */}
+                  {/* Controles de cantidad */}
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <button 
                       onClick={() => eliminarDelCarrito(item.producto.id)}
@@ -103,7 +149,7 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
                     >
                       🗑️
                     </button>
-                    
+
                     <div className="flex items-center bg-gray-50 rounded-lg border border-gray-200 p-0.5 shadow-inner">
                       <button
                         onClick={() => actualizarCantidad(item.producto.id, item.cantidad - 1)}
@@ -139,25 +185,25 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
                   ${obtenerTotal().toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                 </span>
               </div>
-
-                <button
-                    onClick={() => setCheckoutAbierto(true)}
-                    className="w-full bg-brand-blue text-white font-bold py-4 rounded-xl hover:bg-brand-dark active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-brand-blue/20 text-sm uppercase tracking-wider"
-                    >
-                    Confirmar Pedido ➔
-                </button>
+              <button
+                onClick={() => setCheckoutAbierto(true)}
+                className="w-full bg-brand-blue text-white font-bold py-4 rounded-xl hover:bg-brand-dark active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-brand-blue/20 text-sm uppercase tracking-wider"
+              >
+                Confirmar Pedido ➔
+              </button>
             </div>
           )}
 
         </div>
       </div>
-          <ModalCheckout 
-                isOpen={checkoutAbierto} 
-                onClose={() => {
-                    setCheckoutAbierto(false);
-                    onClose();
-                }} 
-            />
+
+      <ModalCheckout 
+        isOpen={checkoutAbierto} 
+        onClose={() => {
+          setCheckoutAbierto(false);
+          onClose();
+        }} 
+      />
     </div>
   );
 }

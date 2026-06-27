@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext';
 
 export default function ModalIngreso() {
   const { cliente, definirCliente } = useCart();
-  const [numeroIngresado, setNumeroIngresado] = useState('');
+  const [documentoIngresado, setDocumentoIngresado] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
@@ -16,28 +16,30 @@ export default function ModalIngreso() {
     e.preventDefault();
     setError('');
     
-    const numeroLimpio = numeroIngresado.trim();
-    if (!numeroLimpio) return;
+    const docLimpio = documentoIngresado.trim();
+    if (!docLimpio) return;
 
     setCargando(true);
 
     try {
+      // Consultamos usando la nueva columna 'documento'
       const { data: clienteEncontrado, error: dbError } = await supabase
         .from('clientes')
-        .select('numero_cliente, nombre_comercio, lista_asignada')
-        .eq('numero_cliente', numeroLimpio)
+        .select('documento, nombre_comercio, lista_asignada')
+        .eq('documento', docLimpio)
         .maybeSingle();
 
       if (dbError) throw dbError;
 
       if (!clienteEncontrado) {
-        setError('El número de cliente no es válido. Verifíquelo o ingrese como invitado.');
+        setError('El DNI o CUIT no corresponde a un comercio habilitado. Verifíquelo o ingrese como invitado.');
         setCargando(false);
         return;
       }
 
+      // Pasamos el documento al estado global del carrito
       definirCliente(
-        clienteEncontrado.numero_cliente,
+        clienteEncontrado.documento,
         clienteEncontrado.nombre_comercio,
         clienteEncontrado.lista_asignada
       );
@@ -53,7 +55,6 @@ export default function ModalIngreso() {
     <div className="fixed inset-0 bg-brand-dark/40 backdrop-blur-md flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-100 relative overflow-hidden">
         
-
         <div className="absolute top-0 left-0 right-0 h-2 bg-brand-blue" />
 
         {/* Encabezado */}
@@ -70,16 +71,16 @@ export default function ModalIngreso() {
         {/* Formulario */}
         <form onSubmit={manejarIngresoAbonado} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-brand-dark uppercase tracking-wider mb-2">
-              Código de Cliente
+            <label className="block text-xs font-bold text-brand-dark uppercase tracking-wider mb-2 text-center">
+              🪪 Identificación del Comercio
             </label>
             <input
               type="text"
-              placeholder="Ej: 1001"
+              placeholder="DNI o CUIT (sin guiones)"
               disabled={cargando}
-              className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl text-center font-mono text-2xl text-brand-dark focus:ring-4 focus:ring-brand-blue/10 focus:border-brand-blue outline-none transition disabled:bg-gray-50 bg-gray-50 font-bold placeholder:text-gray-300"
-              value={numeroIngresado}
-              onChange={(e) => setNumeroIngresado(e.target.value)}
+              className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl text-center font-mono text-xl text-brand-dark focus:ring-4 focus:ring-brand-blue/10 focus:border-brand-blue outline-none transition disabled:bg-gray-50 bg-gray-50 font-bold placeholder:text-gray-300 placeholder:font-sans placeholder:text-base"
+              value={documentoIngresado}
+              onChange={(e) => setDocumentoIngresado(e.target.value)}
             />
           </div>
 

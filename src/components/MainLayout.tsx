@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState, } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import Catalogo from '../components/Catalogo';
-import CarritoSidebar from '../components/CarritoSidebar';
+import dynamic from 'next/dynamic';
 
 const ModalIngresoSinSSR = dynamic(() => import('../components/ModalIngreso'), {
+  ssr: false,
+});
+
+const CarritoSidebar = dynamic(() => import('./CarritoSidebar'), {
   ssr: false,
 });
 
@@ -14,22 +17,36 @@ export default function MainLayout() {
   const { cliente, cerrarSesion, cart } = useCart();
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
+  const [mounted, setMounted] = useState(false); // ✅ AGREGADO
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true); // ✅ Solo se ejecuta en el cliente, después de la hidratación
+  }, []);
 
   const cantidadItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
-  
+
+  const cActivo = cliente as typeof cliente & { documento?: string; numero_cliente?: string };
+
+  // ✅ Mientras no se haya montado en el cliente, no renderizamos nada que dependa
+  // de estado del cliente (cliente, cart). Esto evita el mismatch de hidratación.
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <>
-      {/*Modal de entrada (Cargado dinámicamente solo en el cliente) */}
-      <ModalIngresoSinSSR />
+      {/* Modal de entrada (Cargado dinámicamente solo en el cliente) */}
+      <ModalIngresoSinSSR /> 
 
-      {/*Contenido de la Web (Solo visible si el cliente ya ingresó) */}
-      {cliente && (
+      {/* Contenido de la Web (Solo visible si el cliente ya ingresó y estamos en el navegador) */}
+      {cActivo && (
         <>
-          {/* Navbar*/}
+          {/* Navbar */}
           <nav className="bg-brand-dark text-white sticky top-0 z-40 shadow-xl border-b border-white/10">
             <div className="container mx-auto px-4 py-3 flex justify-between items-center">
               
-              {/* lado izquierdo "LOGO" (Siempre visible) */}
+              {/* Lado izquierdo "LOGO" */}
               <div className="flex items-center gap-2">
                 <span className="text-brand-blue text-xl">■</span>
                 <div>
@@ -41,17 +58,13 @@ export default function MainLayout() {
                   </p>
                 </div>
               </div>
-              
-              {/* lado deerecho "escritorio"*/}
+
+              {/* Lado derecho "Escritorio" */}
               <div className="hidden md:flex items-center gap-4">
                 <div className="text-right border-r border-white/10 pr-4">
-                  <p className="text-xs text-white font-bold">{cliente.nombre_comercio}</p>
-                  <p className="text-[10px] text-gray-400">Cliente N° {cliente.numero_cliente}</p>
+                  <p className="text-xs text-white font-bold">{cActivo.nombre_comercio}</p>
+                  <p className="text-[10px] text-gray-400">ID: {cActivo.documento || cActivo.numero_cliente}</p>
                 </div>
-                
-                <span className="bg-brand-blue text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm uppercase tracking-wider">
-                  Lista {cliente.lista_asignada}
-                </span>
                 
                 <button
                   onClick={() => setCarritoAbierto(true)}
@@ -73,7 +86,7 @@ export default function MainLayout() {
                 </button>
               </div>
 
-              {/* lado derecho: celular (Botón Hamburguesa) */}
+              {/* Lado derecho: Celular */}
               <div className="md:hidden flex items-center gap-3">
                 {cantidadItems > 0 && (
                   <button 
@@ -96,20 +109,20 @@ export default function MainLayout() {
               </div>
             </div>
 
-            {/* menu desplegable mobile */}
+            {/* Menú desplegable Mobile */}
             {menuMovilAbierto && (
               <div className="md:hidden bg-brand-dark border-t border-white/10 animate-in slide-in-from-top duration-200">
                 <div className="p-5 space-y-4 bg-brand-dark/95 backdrop-blur-md">
                   {/* Info del Cliente */}
                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Comercio Activo</p>
-                    <p className="text-sm font-black text-white">{cliente.nombre_comercio}</p>
-                    <p className="text-xs text-gray-400">Número de cliente: {cliente.numero_cliente}</p>
+                    <p className="text-sm font-black text-white">{cActivo.nombre_comercio}</p>
+                    <p className="text-xs text-gray-400">Identificación: {cActivo.documento || cActivo.numero_cliente}</p>
                     
                     <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
                       <span className="text-xs text-gray-300">Tarifa asignada:</span>
                       <span className="bg-brand-blue text-white text-[10px] font-black px-2 py-1 rounded-md uppercase">
-                        Lista {cliente.lista_asignada}
+                        Lista {cActivo.lista_asignada}
                       </span>
                     </div>
                   </div>
@@ -125,7 +138,6 @@ export default function MainLayout() {
                     >
                       🛒 Ver mi Carrito ({cantidadItems})
                     </button>
-                    
                     <button 
                       onClick={cerrarSesion}
                       className="w-full py-4 text-xs font-bold text-red-400 bg-red-400/5 rounded-xl border border-red-400/10"
@@ -142,8 +154,8 @@ export default function MainLayout() {
           <main className="container mx-auto p-4 max-w-5xl mt-4 pb-24">
             <Catalogo />
           </main>
-          
-          {/* boton flotante del carrito - para mobile - */}
+
+          {/* Botón flotante del carrito para mobile */}
           {cantidadItems > 0 && (
             <button
               onClick={() => setCarritoAbierto(true)}
@@ -156,13 +168,11 @@ export default function MainLayout() {
             </button>
           )}
 
-          {/* panel lateral del carrito */}
+          {/* Panel lateral del carrito */}
           <CarritoSidebar 
             isOpen={carritoAbierto} 
             onClose={() => setCarritoAbierto(false)} 
           />
-
-
         </>
       )}
     </>

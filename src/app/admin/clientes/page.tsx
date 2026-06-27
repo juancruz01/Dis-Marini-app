@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 
 interface ClienteDB {
   id: number;
-  numero_cliente: string;
+  documento: string;
   nombre_comercio: string;
   lista_asignada: number;
   telefono?: string;
@@ -23,7 +23,7 @@ export default function GestionClientes() {
   // Estados del Formulario (Alta / Edición)
   const [modalAbierto, setModalAbierto] = useState(false);
   const [idEditando, setIdEditando] = useState<number | null>(null);
-  const [numeroCliente, setNumeroCliente] = useState('');
+  const [documento, setDocumento] = useState('');
   const [nombreComercio, setNombreComercio] = useState('');
   const [listaAsignada, setListaAsignada] = useState(3);
   const [telefono, setTelefono] = useState('');
@@ -64,7 +64,7 @@ export default function GestionClientes() {
     setIdEditando(null);
     // Sugerimos un número de cliente al azar de 4 dígitos para agilizar, el admin puede cambiarlo
     const sugerido = Math.floor(1000 + Math.random() * 9000).toString();
-    setNumeroCliente(sugerido);
+    setDocumento(sugerido);
     setNombreComercio('');
     setListaAsignada(3);
     setTelefono('');
@@ -74,7 +74,7 @@ export default function GestionClientes() {
   // Cargar datos para edición
   const abrirEdicion = (c: ClienteDB) => {
     setIdEditando(c.id);
-    setNumeroCliente(c.numero_cliente);
+    setDocumento(c.documento);
     setNombreComercio(c.nombre_comercio);
     setListaAsignada(c.lista_asignada);
     setTelefono(c.telefono || '');
@@ -87,7 +87,7 @@ export default function GestionClientes() {
     setCargando(true);
 
     const datosCliente = {
-      numero_cliente: numeroCliente.trim(),
+      documento: documento.trim(),
       nombre_comercio: nombreComercio.trim(),
       lista_asignada: Number(listaAsignada),
       telefono: telefono.trim() || null,
@@ -106,7 +106,7 @@ export default function GestionClientes() {
         const { data: existe } = await supabase
           .from('clientes')
           .select('id')
-          .eq('numero_cliente', datosCliente.numero_cliente)
+          .eq('documento', datosCliente.documento)
           .maybeSingle();
 
         if (existe) {
@@ -125,8 +125,9 @@ export default function GestionClientes() {
       setModalAbierto(false);
       cargarClientes();
     } catch (err) {
-      console.error('Error al guardar cliente:', err);
-      alert('Hubo un error al guardar los datos en Supabase.');
+      const errorDeSupabase = err as { message?: string };
+      console.error('Error detallado de Supabase:', errorDeSupabase);
+      alert(`Hubo un error en Supabase: ${errorDeSupabase.message || 'Consulte la consola.'}`);
     } finally {
       setCargando(false);
     }
@@ -192,15 +193,15 @@ export default function GestionClientes() {
                     <td colSpan={5} className="p-10 text-center text-gray-400">No hay clientes dados de alta en el sistema.</td>
                   </tr>
                 ) : (
-                  clientes.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                  clientes.map((c, index) => (
+                    <tr key={c.documento || `cliente-${index}`} className="bg-white even:bg-gray-50/90 hover:bg-brand-blue/5 transition-colors duration-150">
                       <td className="p-4">
                         <span className="font-bold text-brand-dark text-sm block">{c.nombre_comercio}</span>
                         <span className="text-[9px] text-gray-400 font-normal">Registrado en la plataforma</span>
                       </td>
                       <td className="p-4">
                         <span className="font-mono bg-brand-light text-brand-dark px-2.5 py-1 rounded-md font-bold text-xs border border-gray-200/40">
-                          {c.numero_cliente}
+                          {c.documento}
                         </span>
                       </td>
                       <td className="p-4">
@@ -256,8 +257,8 @@ export default function GestionClientes() {
                     maxLength={10}
                     placeholder="Ej: 1024" 
                     className="w-full p-2.5 border rounded-xl font-mono font-bold text-brand-dark outline-none focus:border-brand-blue" 
-                    value={numeroCliente} 
-                    onChange={(e) => setNumeroCliente(e.target.value)} 
+                    value={documento || ''}
+                    onChange={(e) => setDocumento(e.target.value)} 
                   />
                 </div>
                 <div>

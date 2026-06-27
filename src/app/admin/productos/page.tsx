@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { getPresignedUploadUrl } from '../../../services/mediaService';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import AdminNav from '../../../components/AdminNav';
 import { Producto } from '../../../context/CartContext';
@@ -11,6 +12,9 @@ export default function GestionProductos() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
   const [autenticado, setAutenticado] = useState(false);
+  const [imagenUrl, setImagenUrl] = useState(''); // Aquí guardaremos la "Key" del archivo (ej: "productos/queso-123.jpg")
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Estados del Formulario (Alta / Edición)
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -101,7 +105,7 @@ export default function GestionProductos() {
       precio_lista_3: Number(precio3),
       stock_disponible: stock,
       informacion_adicional: infoAdicional.trim() || null,
-      imagen_url: 'https://via.placeholder.com/150'
+      imagen_url: imagenUrl.trim()
     };
 
     try {
@@ -113,18 +117,21 @@ export default function GestionProductos() {
           .eq('id', idEditando);
         if (error) throw error;
       } else {
-        // Insertar nuevo
-        const { error } = await supabase
-          .from('productos')
-          .insert([datosProducto]);
-        if (error) throw error;
-      }
+      // Insertar nuevo
+      const { error } = await supabase
+        .from('productos')
+        .insert([datosProducto]);
+      if (error) throw error;
+    }
 
       setModalAbierto(false);
       cargarProductos();
     } catch (err) {
-      console.error('Error al guardar producto:', err);
-      alert('Hubo un error al procesar la operación en la base de datos.');
+      // Conversión segura para evitar el "any" y que ESLint no proteste
+      const errorDeSupabase = err as { message?: string };
+      
+      console.error('Error detallado de Supabase:', errorDeSupabase);
+      alert(`Hubo un error: ${errorDeSupabase.message || 'Consulte la consola para más detalles.'}`);
     } finally {
       setCargando(false);
     }
@@ -148,6 +155,44 @@ export default function GestionProductos() {
   };
 
   if (!autenticado) return null;
+  
+  
+  //MANEJO DE IMAGENES EN CLOUDFLARE
+  const manejarSubidaImagen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const archivos = e.target.files;
+  if (!archivos || archivos.length === 0) return;
+
+  const archivo = archivos[0];
+  setSubiendoImagen(true);
+
+  // Creamos un nombre único para el archivo en Cloudflare
+  const nombreLimpio = archivo.name.replace(/\s+/g, '_');
+  const r2Key = `productos/${Date.now()}_${nombreLimpio}`;
+
+  try {
+    // 1. Pedimos la URL firmada de subida a nuestro servicio
+    const presignedUrl = await getPresignedUploadUrl(r2Key, archivo.type);
+
+    // 2. Subimos el archivo binario directo a Cloudflare mediante un PUT HTTP
+    const respuesta = await fetch(presignedUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': archivo.type },
+      body: archivo,
+    });
+
+    if (!respuesta.ok) throw new Error('Error al empujar el archivo a R2');
+
+    // 3. Si todo salió bien, guardamos la R2 Key en el estado del producto
+    setImagenUrl(r2Key);
+    alert('¡Imagen subida a Cloudflare con éxito!');
+  } catch (err) {
+    console.error(err);
+    alert('No se pudo subir la imagen.');
+  } finally {
+    setSubiendoImagen(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-brand-light text-gray-800">
@@ -281,6 +326,34 @@ export default function GestionProductos() {
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Información Adicional (Opcional)</label>
                 <input type="text" placeholder="Ej: Sin TACC / Horma reducida en sal" className="w-full p-2.5 border rounded-xl" value={infoAdicional} onChange={(e) => setInfoAdicional(e.target.value)} />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase">Imagen del Producto</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    ref={fileInputRef} 
+                    onChange={manejarSubidaImagen} 
+                  />
+                  <button
+                    type="button"
+                    disabled={subiendoImagen}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-brand-dark rounded-xl font-bold text-xs transition"
+                  >
+                    {subiendoImagen ? '🔄 Subiendo...' : '📁 Seleccionar Foto'}
+                  </button>
+                  
+                  {imagenUrl && (
+                    <span className="text-[10px] text-green-600 font-mono truncate max-w-50">
+                      ✓ {imagenUrl.split('/').pop()}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[9px] text-gray-400">La foto se alojará de forma segura en Cloudflare R2 y quedará vinculada permanentemente al ítem.</p>
               </div>
 
               <div>

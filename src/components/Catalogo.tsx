@@ -4,6 +4,33 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useCart, Producto } from '../context/CartContext';
 import Image from 'next/image';
+import { getPresignedUrl } from '../services/mediaService';
+
+export const ImagenProductoR2 = ({ imagenKey, nombre }: { imagenKey: string | null, nombre: string }) => {
+  const [urlFinal, setUrlFinal] = useState('/productos/placeholder.jpg');
+
+  useEffect(() => {
+    let activo = true;
+    
+    // Le pedimos a Cloudflare la URL firmada en tiempo real
+    getPresignedUrl(imagenKey).then((url) => {
+      if (activo) setUrlFinal(url);
+    });
+
+    return () => { activo = false; };
+  }, [imagenKey]);
+
+  return (
+    <Image 
+      src={urlFinal} 
+      alt={nombre} 
+      fill
+      sizes="80px"
+      className="object-cover"
+    />
+  );
+};
+
 
 export default function Catalogo() {
   const { cliente, agregarAlCarrito, cart, actualizarCantidad } = useCart();
@@ -134,23 +161,7 @@ export default function Catalogo() {
                 
                 {/* Imagen del Producto */}
                 <div className="w-20 h-20 bg-gray-100 rounded-xl shrink-0 overflow-hidden border border-gray-100 flex items-center justify-center text-2xl relative">
-                  <Image 
-                    // AGREGAMOS la barra '/' entre Cremosos y el ID
-                    src={`/Productos/Cremosos/${producto.id}.png`} 
-                    alt={producto.nombre} 
-                    fill
-                    sizes="80px"
-                    className="object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      
-                      // Clausura de seguridad: si el placeholder también falla, evitamos el bucle infinito
-                      if (target.src.includes('placeholder')) return; 
-                      
-                      // Intentamos cargar un placeholder genérico (asegurate de que exista o poné una ruta válida)
-                      target.src = '/Productos/placeholder.jpg'; 
-                    }}
-                  />
+                  <ImagenProductoR2 imagenKey={producto.imagen_url} nombre={producto.nombre} />
                 </div>
 
                 {/* Info del Producto */}
