@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import AdminNav from '../../../components/AdminNav';
 
 // ─── Supabase ─────────────────────────────────────────────────────────────────
 const supabase = createClient(
@@ -158,6 +159,7 @@ export default function HistorialPage() {
 
   return (
     <div className="min-h-screen bg-brand-light">
+        <AdminNav />
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
 
         {/* Header */}
@@ -246,7 +248,7 @@ export default function HistorialPage() {
                 </thead>
                 <tbody>
                   {pedidosFiltrados.map((pedido, i) => (
-                    <>
+                    <React.Fragment key={pedido.id}>
                       <tr
                         key={pedido.id}
                         className={`border-b border-brand-dark/5 hover:bg-brand-light/60 transition cursor-pointer ${
@@ -321,7 +323,7 @@ export default function HistorialPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
