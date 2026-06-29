@@ -22,13 +22,11 @@ type Paso = 'formulario' | 'enviando' | 'exito' | 'error';
 export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
   const { cart, obtenerTotal, cliente, limpiarCarrito } = useCart();
 
-  // Estados del formulario
   const [metodoEntrega, setMetodoEntrega] = useState<'Reparto' | 'Retira en Local'>('Reparto');
   const [comentarios, setComentarios] = useState('');
   const [paso, setPaso] = useState<Paso>('formulario');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Campos exclusivos para invitados
   const [nombreInvitado, setNombreInvitado] = useState('');
   const [telefonoInvitado, setTelefonoInvitado] = useState('');
   const [direccionInvitado, setDireccionInvitado] = useState('');
@@ -46,10 +44,9 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
     const { data: pedidoData, error: pedidoError } = await supabase
       .from('pedidos')
       .insert({
-        // numero_cliente es la FK que referencia a clientes(documento)
         cliente_id: cliente.numero_cliente,
         total_estimado: total,
-        estado: 'pendiente',
+        estado: 'confirmado',
       })
       .select('id')
       .single();
@@ -60,7 +57,7 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
 
     const items = cart.map((item) => ({
       pedido_id: pedidoData.id,
-      producto_id: String(item.producto.id),
+      producto_id: item.producto.id,
       producto_nombre: item.producto.nombre,
       cantidad: item.cantidad,
       precio_unitario: item.precioAplicado,
@@ -110,17 +107,14 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
     setErrorMsg('');
 
     try {
-      // Primero guardamos en Supabase, obtenemos el ID del pedido
       const pedidoId = await guardarEnSupabase();
 
-      // Luego abrimos WhatsApp con la referencia del pedido incluida
       const mensaje = armarMensaje(pedidoId);
       const url = `https://api.whatsapp.com/send?phone=541159320255&text=${encodeURIComponent(mensaje)}`;
       window.open(url, '_blank');
 
       setPaso('exito');
 
-      // Limpiamos y cerramos después de un momento
       setTimeout(() => {
         limpiarCarrito();
         onClose();
@@ -137,7 +131,7 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
     }
   };
 
-  // ─── UI ────────────────────────────────────────────────────────────────────
+  // ─── UI ───────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-55 bg-brand-dark/50 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
@@ -184,17 +178,16 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
           </div>
         )}
 
-        {/* Formulario principal */}
+        {/* Formulario */}
         {(paso === 'formulario' || paso === 'enviando') && (
           <form onSubmit={handleConfirmar} className="space-y-4 text-xs">
 
-            {/* Campos exclusivos para invitados */}
+            {/* Campos invitado */}
             {esInvitado && (
               <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-xl space-y-3">
                 <span className="block font-black text-amber-800 text-[10px] uppercase tracking-wider">
                   📋 Datos de contacto comercial
                 </span>
-
                 <div>
                   <label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">
                     Nombre del comercio / almacén
@@ -208,7 +201,6 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
                     onChange={(e) => setNombreInvitado(e.target.value)}
                   />
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">
@@ -281,7 +273,9 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex justify-between items-center">
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Total estimado</span>
-                <span className="text-[10px] text-gray-300">({cart.length} {cart.length === 1 ? 'producto' : 'productos'})</span>
+                <span className="text-[10px] text-gray-300">
+                  ({cart.length} {cart.length === 1 ? 'producto' : 'productos'})
+                </span>
               </div>
               <span className="text-xl font-black text-brand-dark">
                 ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}

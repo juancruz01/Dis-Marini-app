@@ -198,10 +198,15 @@ export default function Catalogo() {
                       ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
                     
-                    {/*Si es Horma o Pieza, le mostramos el valor estimado de la pieza */}
-                    {(producto.unidad_medida.toLowerCase() === 'horma' || producto.unidad_medida.toLowerCase() === 'pieza') && (
+                    {/*Si es Horma, le mostramos el valor estimado de la horma segun su precio por kilo */}
+                    {(producto.unidad_medida.toLowerCase() === 'horma') && (
                       <span className="block text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 border border-amber-100">
-                        Aprox: ${(precioFinal * 3.5).toLocaleString('es-AR')} x pieza (3.5kg)
+                        Aprox: ${(precioFinal * 4.10).toLocaleString('es-AR')} x Horma (4.10kg)
+                      </span>
+                    )}
+                    {(producto.unidad_medida.toLowerCase() === 'pieza') && (
+                      <span className="block text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 border border-amber-100">
+                        Aprox: ${(precioFinal * 5).toLocaleString('es-AR')} x pieza (5kg)
                       </span>
                     )}
                   </div>

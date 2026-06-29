@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   
   // 🌟 Esto controla cómo se ve en buscadores y pestañas
   icons: {
-    icon: '/favicon.ico', // Acordate de tener un favicon en tu carpeta public
+    icon: '/marini-AZUL.png', // Acordate de tener un favicon en tu carpeta public
   },
 
   // 🌟 Open Graph: Esto controla cómo se ve en WhatsApp, Facebook, etc.

@@ -67,7 +67,6 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
   const { cart, actualizarCantidad, eliminarDelCarrito, obtenerTotal, cliente } = useCart();
   const [checkoutAbierto, setCheckoutAbierto] = useState(false);
 
-  // 🌟 SOLUCIÓN DEFINITIVA: Verificamos si estamos en el navegador sin usar useEffect ni useState
   const estaEnElCliente = typeof window !== 'undefined';
 
   if (!isOpen) return null;
@@ -87,13 +86,6 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
           <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-brand-dark text-white">
             <div>
               <h2 className="text-lg font-black tracking-tight">Tu Pedido</h2>
-              <p className="text-xs text-gray-300 mt-0.5">
-                Precios calculados con:{' '}
-                <span className="text-brand-blue font-bold">
-                  {/* Si está en el cliente muestra la lista, sino el placeholder para SSR */}
-                  Lista {estaEnElCliente && cliente?.lista_asignada ? cliente.lista_asignada : '...'}
-                </span>
-              </p>
             </div>
             <button 
               onClick={onClose}
