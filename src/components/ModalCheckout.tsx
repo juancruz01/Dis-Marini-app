@@ -107,11 +107,18 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
     setErrorMsg('');
 
     try {
+      const ventanaWsp = window.open('', '_blank');
+      
       const pedidoId = await guardarEnSupabase();
-
       const mensaje = armarMensaje(pedidoId);
       const url = `https://api.whatsapp.com/send?phone=541159320255&text=${encodeURIComponent(mensaje)}`;
+
+      if (ventanaWsp) {
+      ventanaWsp.location.href = url;
+    } else {
+      // Fallback por si igual fue bloqueada
       window.open(url, '_blank');
+    }
 
       setPaso('exito');
 
