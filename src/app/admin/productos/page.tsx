@@ -72,6 +72,7 @@ export default function GestionProductos() {
     setPrecio3(0);
     setStock(true);
     setInfoAdicional('');
+    setImagenUrl('');
     setModalAbierto(true);
   };
 
@@ -87,6 +88,7 @@ export default function GestionProductos() {
     setPrecio3(p.precio_lista_3);
     setStock(p.stock_disponible);
     setInfoAdicional(p.informacion_adicional || '');
+    setImagenUrl(p.imagen_url || '');
     setModalAbierto(true);
   };
 
@@ -157,42 +159,44 @@ export default function GestionProductos() {
   if (!autenticado) return null;
   
   
-  //MANEJO DE IMAGENES EN CLOUDFLARE
+  // MANEJO DE IMAGENES EN CLOUDFLARE (CORREGIDO)
   const manejarSubidaImagen = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const archivos = e.target.files;
-  if (!archivos || archivos.length === 0) return;
+    const archivos = e.target.files;
+    if (!archivos || archivos.length === 0) return;
 
-  const archivo = archivos[0];
-  setSubiendoImagen(true);
+    const archivo = archivos[0];
+    setSubiendoImagen(true);
 
-  // Creamos un nombre único para el archivo en Cloudflare
-  const nombreLimpio = archivo.name.replace(/\s+/g, '_');
-  const r2Key = `productos/${Date.now()}_${nombreLimpio}`;
+    // 1. Extraemos la extensión original (.jpg, .png, etc.)
+    const extension = archivo.name.split('.').pop() || 'jpg';
+    
+    // 2. Generamos un ID 100% ÚNICO global usando UUID + Timestamp
+    const idUnico = crypto.randomUUID(); 
+    const r2Key = `productos/${Date.now()}_${idUnico}.${extension}`;
 
-  try {
-    // 1. Pedimos la URL firmada de subida a nuestro servicio
-    const presignedUrl = await getPresignedUploadUrl(r2Key, archivo.type);
+    try {
+      // Pedimos la URL firmada
+      const presignedUrl = await getPresignedUploadUrl(r2Key, archivo.type);
 
-    // 2. Subimos el archivo binario directo a Cloudflare mediante un PUT HTTP
-    const respuesta = await fetch(presignedUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': archivo.type },
-      body: archivo,
-    });
+      // Subimos el archivo a Cloudflare R2
+      const respuesta = await fetch(presignedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': archivo.type },
+        body: archivo,
+      });
 
-    if (!respuesta.ok) throw new Error('Error al empujar el archivo a R2');
+      if (!respuesta.ok) throw new Error('Error al empujar el archivo a R2');
 
-    // 3. Si todo salió bien, guardamos la R2 Key en el estado del producto
-    setImagenUrl(r2Key);
-    alert('¡Imagen subida a Cloudflare con éxito!');
-  } catch (err) {
-    console.error(err);
-    alert('No se pudo subir la imagen.');
-  } finally {
-    setSubiendoImagen(false);
-  }
-};
-
+      // Guardamos la nueva key única
+      setImagenUrl(r2Key);
+      alert('¡Imagen subida a Cloudflare con éxito!');
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo subir la imagen.');
+    } finally {
+      setSubiendoImagen(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-brand-light text-gray-800">
