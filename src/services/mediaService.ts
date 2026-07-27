@@ -1,5 +1,5 @@
 import { r2Client, R2_CONFIG } from '../lib/cloudflare';
-import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Genera una URL temporal para visualizar la imagen en el catálogo
@@ -33,4 +33,24 @@ export const getPresignedUploadUrl = async (key: string, contentType: string): P
   });
   // Expiración rápida de 5 minutos para subir el archivo
   return await getSignedUrl(r2Client, command, { expiresIn: 300 });
+};
+
+// Borra un archivo de Cloudflare R2 usando su key (ej: "productos/123_abc.jpg")
+export const deleteFileFromR2 = async (fileKey: string | null): Promise<boolean> => {
+  if (!fileKey || fileKey.startsWith('http') || fileKey.startsWith('/')) {
+    return false; // Si no hay key o es una imagen por defecto/URL externa, no hace nada
+  }
+
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: R2_CONFIG.bucketName,
+      Key: fileKey,
+    });
+    await r2Client.send(command);
+    console.log(`✓ Archivo eliminado de R2: ${fileKey}`);
+    return true;
+  } catch (error) {
+    console.error('Error al eliminar archivo de Cloudflare R2:', error);
+    return false;
+  }
 };

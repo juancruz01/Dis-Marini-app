@@ -1,6 +1,6 @@
 'use client';
 
-import { getPresignedUploadUrl } from '../../../services/mediaService';
+import { getPresignedUploadUrl, deleteFileFromR2 } from '../../../services/mediaService';
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import AdminNav from '../../../components/AdminNav';
@@ -145,8 +145,18 @@ export default function GestionProductos() {
     setCargando(true);
 
     try {
+      // 1. Buscamos el producto para obtener la ruta de su imagen
+      const productoAEliminar = productos.find(p => p.id === id);
+
+      // 2. Si tenía una imagen en R2, la borramos primero
+      if (productoAEliminar?.imagen_url) {
+        await deleteFileFromR2(productoAEliminar.imagen_url);
+      }
+
+      // 3. Borramos el producto de Supabase
       const { error } = await supabase.from('productos').delete().eq('id', id);
       if (error) throw error;
+
       cargarProductos();
     } catch (err) {
       console.error('Error al eliminar producto:', err);
@@ -186,6 +196,10 @@ export default function GestionProductos() {
       });
 
       if (!respuesta.ok) throw new Error('Error al empujar el archivo a R2');
+
+      if (imagenUrl && imagenUrl !== r2Key) {
+        await deleteFileFromR2(imagenUrl);
+      }
 
       // Guardamos la nueva key única
       setImagenUrl(r2Key);
