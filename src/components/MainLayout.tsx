@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import Catalogo from '../components/Catalogo';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 
 const ModalIngresoSinSSR = dynamic(() => import('../components/ModalIngreso'), {
   ssr: false,
@@ -43,20 +44,12 @@ export default function MainLayout() {
       {cActivo && (
         <>
           {/* Navbar */}
-          <nav className="bg-brand-dark text-white sticky top-0 z-40 shadow-xl border-b border-white/10">
-            <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <nav className="bg-brand-dark text-white sticky top-0 z-40 h-18 shadow-xl border-b border-white/10">
+            <div className="container mx-auto px-4 h-full flex justify-between items-center">
               
               {/* Lado izquierdo "LOGO" */}
-              <div className="flex items-center gap-2">
-                <span className="text-brand-blue text-xl">■</span>
-                <div>
-                  <h1 className="font-black text-base md:text-xl tracking-tight leading-none">
-                    Distribuidora Marini
-                  </h1>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-                    Catálogo Mayorista
-                  </p>
-                </div>
+              <div className="flex items-center">
+                <Image src="/Marini-BLANCO.png" alt="Logo Marini" height={36} width={150} className="object-contain" />
               </div>
 
               {/* Lado derecho "Escritorio" */}

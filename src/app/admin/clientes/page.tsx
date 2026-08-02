@@ -237,7 +237,7 @@ export default function GestionClientes() {
             
             <form onSubmit={guardarCliente} className="space-y-4 text-xs">
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nombre del Comercio / Almacén</label>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nombre del Comercio</label>
                 <input 
                   type="text" 
                   required 
@@ -250,12 +250,12 @@ export default function GestionClientes() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Código de Ingreso (N°)</label>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Numero de Documento</label>
                   <input 
                     type="text" 
                     required 
                     maxLength={10}
-                    placeholder="Ej: 1024" 
+                    placeholder="Ej: 43666999" 
                     className="w-full p-2.5 border rounded-xl font-mono font-bold text-brand-dark outline-none focus:border-brand-blue" 
                     value={documento || ''}
                     onChange={(e) => setDocumento(e.target.value)} 
@@ -280,9 +280,9 @@ export default function GestionClientes() {
                   value={listaAsignada} 
                   onChange={(e) => setListaAsignada(Number(e.target.value))}
                 >
-                  <option value={1}>Lista 1 (Tarifa Super Mayorista / Distribuidores)</option>
+                  <option value={1}>Lista 1 (Tarifa Estandar / Minorista e invitados)</option>
                   <option value={2}>Lista 2 (Tarifa Intermedia / Almacenes Grandes)</option>
-                  <option value={3}>Lista 3 (Tarifa Estándar / Minoristas e Invitados)</option>
+                  <option value={3}>Lista 3 (Tarifa mayorista / Distribuidores)</option>
                 </select>
                 <p className="text-[10px] text-gray-400 mt-1">Este comercio verá automáticamente los precios vinculados a esta lista al loguearse en la web.</p>
               </div>

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 
 export default function AdminNav() {
   const pathname = usePathname();
@@ -17,15 +18,12 @@ export default function AdminNav() {
   ];
 
   return (
-    <nav className="bg-brand-dark text-white shadow-xl relative z-50">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-6xl">
+    <nav className="bg-brand-dark text-white shadow-xl relative z-50 h-19">
+      <div className="container mx-auto px-4 h-full flex justify-between items-center max-w-6xl">
         
         {/* LOGO */}
-        <div className="flex items-center gap-2">
-          <span className="text-lg">⚙️</span>
-          <h1 className="font-black text-base tracking-tight whitespace-nowrap">
-            Marini <span className="text-brand-blue">Admin</span>
-          </h1>
+        <div className="flex items-center">
+          <Image src="/Marini-BLANCO.png" alt="Logo Marini" height={36} width={150} className="object-contain" />
         </div>
         
         {/* boton hamburguesa (Solo visible para celulares) */}
