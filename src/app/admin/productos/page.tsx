@@ -36,6 +36,7 @@ export default function GestionProductos() {
   const [precio3, setPrecio3] = useState(0);
   const [stock, setStock] = useState(true);
   const [infoAdicional, setInfoAdicional] = useState('');
+  const [pesoEstimado, setPesoEstimado] = useState<number | null>(null);
 
   useEffect(() => {
     async function verificarSesion() {
@@ -155,6 +156,7 @@ export default function GestionProductos() {
     setUnidadMedida('Kilo');
     setPrecio1(0); setPrecio2(0); setPrecio3(0);
     setStock(true); setInfoAdicional(''); setImagenUrl('');
+    setPesoEstimado(null);
     setModalAbierto(true);
   };
 
@@ -166,6 +168,7 @@ export default function GestionProductos() {
     setStock(p.stock_disponible);
     setInfoAdicional(p.informacion_adicional || '');
     setImagenUrl(p.imagen_url || '');
+    setPesoEstimado(p.peso_estimado ?? null);
     setModalAbierto(true);
   };
 
@@ -181,6 +184,7 @@ export default function GestionProductos() {
       stock_disponible: stock,
       informacion_adicional: infoAdicional.trim() || null,
       imagen_url: imagenUrl.trim(),
+      peso_estimado: pesoEstimado,
     };
     try {
       if (idEditando) {
@@ -506,9 +510,35 @@ export default function GestionProductos() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Información Adicional (Opcional)</label>
-                <input type="text" placeholder="Ej: Sin TACC / Horma reducida en sal" className="w-full p-2.5 border rounded-xl" value={infoAdicional} onChange={(e) => setInfoAdicional(e.target.value)} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Información Adicional (Opcional)</label>
+                  <input type="text" placeholder="Ej: Sin TACC / Horma reducida en sal" className="w-full p-2.5 border rounded-xl" value={infoAdicional} onChange={(e) => setInfoAdicional(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    Peso estimado por unidad (kg)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder={
+                      unidadMedida === 'Horma' ? 'Ej: 4.5' :
+                      unidadMedida === 'Pieza' ? 'Ej: 5.0' :
+                      'Ej: 3.5'
+                    }
+                    className="w-full p-2.5 border rounded-xl bg-white"
+                    value={pesoEstimado ?? ''}
+                    onChange={(e) => setPesoEstimado(e.target.value ? Number(e.target.value) : null)}
+                  />
+                  <p className="text-[9px] text-gray-400 mt-1">
+                    {unidadMedida === 'Kilo'
+                      ? 'Completá solo si el producto tiene un peso típico por pieza (ej: barra de queso 4.5kg).'
+                      : 'Peso promedio de cada unidad. Se usa para mostrar el precio estimado al cliente.'
+                    }
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-2">

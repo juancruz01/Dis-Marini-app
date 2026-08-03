@@ -16,6 +16,7 @@ export interface Producto {
   precio_lista_2: number;
   precio_lista_3: number;
   stock_disponible: boolean;
+  peso_estimado: number | null;
 }
 
 export interface CartItem {
