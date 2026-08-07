@@ -1,6 +1,9 @@
+'use server';
+
 import { r2Client, R2_CONFIG } from '../lib/cloudflare';
 import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { requerirSesionAdmin } from '../lib/supabase.server';
 
 // Genera una URL temporal para visualizar la imagen en el catálogo
 export const getPresignedUrl = async (fileKey: string | null): Promise<string> => {
@@ -26,6 +29,7 @@ export const getPresignedUrl = async (fileKey: string | null): Promise<string> =
 
 // Genera la URL de subida (PUT) para que el Admin suba el archivo
 export const getPresignedUploadUrl = async (key: string, contentType: string): Promise<string> => {
+  await requerirSesionAdmin();
   const command = new PutObjectCommand({
     Bucket: R2_CONFIG.bucketName,
     Key: key,
@@ -40,6 +44,8 @@ export const deleteFileFromR2 = async (fileKey: string | null): Promise<boolean>
   if (!fileKey || fileKey.startsWith('http') || fileKey.startsWith('/')) {
     return false; // Si no hay key o es una imagen por defecto/URL externa, no hace nada
   }
+
+  await requerirSesionAdmin();
 
   try {
     const command = new DeleteObjectCommand({

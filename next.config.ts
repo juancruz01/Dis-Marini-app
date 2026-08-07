@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.0.178'],
   
   images: {
+    // Las imágenes de productos viven en R2 detrás de URLs firmadas que cambian
+    // en cada request. El optimizador de Vercel las trata como "imagen nueva"
+    // cada vez y agota la cuota gratuita (1000/mes) en minutos -> error 402.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
