@@ -153,7 +153,7 @@ export default function GestionClientes() {
   if (!autenticado) return null;
 
   return (
-    <div className="min-h-screen bg-brand-light text-gray-800">
+    <div className="min-h-screen bg-brand-light text-gray-800 md:pl-56">
       <AdminNav />
 
       <main className="container mx-auto p-6 max-w-6xl mt-4 space-y-4">

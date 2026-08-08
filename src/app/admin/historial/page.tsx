@@ -228,7 +228,7 @@ export default function HistorialPage() {
   );
 
   return (
-    <div className="min-h-screen bg-brand-light">
+    <div className="min-h-screen bg-brand-light md:pl-56">
       <AdminNav />
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
 

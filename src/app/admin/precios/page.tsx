@@ -195,7 +195,7 @@ export default function PreciosPage() {
   const fallidos = resultados.filter((r) => !r.ok);
 
   return (
-    <div className="min-h-screen bg-brand-light">
+    <div className="min-h-screen bg-brand-light md:pl-56">
       <AdminNav />
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
 

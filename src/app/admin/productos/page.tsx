@@ -254,7 +254,7 @@ export default function GestionProductos() {
     productosFiltrados.length > 0 && seleccionados.size === productosFiltrados.length;
 
   return (
-    <div className="min-h-screen bg-brand-light text-gray-800">
+    <div className="min-h-screen bg-brand-light text-gray-800 md:pl-56">
       <AdminNav />
 
       <main className="container mx-auto p-6 max-w-6xl mt-4 space-y-4">
