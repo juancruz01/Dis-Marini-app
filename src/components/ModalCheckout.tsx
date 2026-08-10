@@ -27,15 +27,7 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
   const [paso, setPaso] = useState<Paso>('formulario');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const [nombreInvitado, setNombreInvitado] = useState('');
-  const [telefonoInvitado, setTelefonoInvitado] = useState('');
-  const [direccionInvitado, setDireccionInvitado] = useState('');
-
   if (!isOpen || !cliente) return null;
-
-  const esInvitado =
-    cliente.numero_cliente === '9999' ||
-    cliente.nombre_comercio.toLowerCase().includes('invitado');
 
   const total = obtenerTotal();
 
@@ -71,16 +63,10 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
 
   // ─── 2. Armar mensaje WhatsApp ─────────────────────────────────────────────
   const armarMensaje = (pedidoId: string) => {
-    const nombreComercio = esInvitado ? nombreInvitado.trim() : cliente.nombre_comercio;
-    const cuentaLinea = esInvitado
-      ? `*Teléfono:* ${telefonoInvitado.trim()}\n*Dirección:* ${direccionInvitado.trim()}\n`
-      : `*N° Cuenta:* ${cliente.numero_cliente}\n`;
-
     let msg = `*📦 NUEVO PEDIDO - DISTRIBUIDORA MARINI*\n`;
     msg += `-------------------------------------------\n`;
-    if (esInvitado) msg += `*⚠️ CLIENTE NUEVO / INVITADO*\n`;
-    msg += `*Comercio:* ${nombreComercio}\n`;
-    msg += cuentaLinea;
+    msg += `*Comercio:* ${cliente.nombre_comercio}\n`;
+    msg += `*N° Cuenta:* ${cliente.numero_cliente}\n`;
     msg += `*Método:* ${metodoEntrega}\n`;
     if (comentarios.trim()) msg += `*Notas:* ${comentarios.trim()}\n`;
     msg += `*Ref. pedido:* ${pedidoId.slice(0, 8).toUpperCase()}\n`;
@@ -127,9 +113,6 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
         onClose();
         setPaso('formulario');
         setComentarios('');
-        setNombreInvitado('');
-        setTelefonoInvitado('');
-        setDireccionInvitado('');
       }, 2000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al procesar el pedido';
@@ -188,56 +171,6 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
         {/* Formulario */}
         {(paso === 'formulario' || paso === 'enviando') && (
           <form onSubmit={handleConfirmar} className="space-y-4 text-xs">
-
-            {/* Campos invitado */}
-            {esInvitado && (
-              <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-xl space-y-3">
-                <span className="block font-black text-amber-800 text-[10px] uppercase tracking-wider">
-                  📋 Datos de contacto comercial
-                </span>
-                <div>
-                  <label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">
-                    Nombre del comercio / almacén
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej: Fiambrería San Cayetano"
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-sm outline-none focus:border-brand-blue"
-                    value={nombreInvitado}
-                    onChange={(e) => setNombreInvitado(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">
-                      Teléfono móvil
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="Ej: 1123456789"
-                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-sm outline-none focus:border-brand-blue"
-                      value={telefonoInvitado}
-                      onChange={(e) => setTelefonoInvitado(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">
-                      Dirección del local
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej: Av. Mitre 1234, Avellaneda"
-                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-sm outline-none focus:border-brand-blue"
-                      value={direccionInvitado}
-                      onChange={(e) => setDireccionInvitado(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Método de entrega */}
             <div>

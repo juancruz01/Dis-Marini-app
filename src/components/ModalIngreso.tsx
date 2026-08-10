@@ -32,7 +32,7 @@ export default function ModalIngreso() {
       if (dbError) throw dbError;
 
       if (!clienteEncontrado) {
-        setError('El DNI o CUIT no corresponde a un comercio habilitado. Verifíquelo o ingrese como invitado.');
+        setError('El DNI o CUIT no corresponde a un comercio habilitado. Verifíquelo o comuníquese con la distribuidora.');
         setCargando(false);
         return;
       }
@@ -102,23 +102,6 @@ export default function ModalIngreso() {
             )}
           </button>
         </form>
-
-        {/* Separador */}
-        <div className="relative flex py-5 items-center">
-          <div className="grow border-t border-gray-100"></div>
-          <span className="shrink mx-4 text-gray-400 text-[10px] font-bold uppercase tracking-widest">Nuevos Clientes</span>
-          <div className="grow border-t border-gray-100"></div>
-        </div>
-
-        {/* Botón Invitado */}
-        <button
-          onClick={() => definirCliente('INVITADO', 'Cliente Invitado / Nuevo', 3)}
-          disabled={cargando}
-          className="w-full bg-white text-brand-blue font-bold py-3.5 rounded-xl hover:bg-brand-light active:scale-[0.99] transition border-2 border-brand-blue/20 hover:border-brand-blue/40 text-sm tracking-wide"
-        >
-          Ver Catálogo General
-        </button>
-
       </div>
     </div>
   );

@@ -14,9 +14,14 @@ const CarritoSidebar = dynamic(() => import('./CarritoSidebar'), {
   ssr: false,
 });
 
+const HistorialClienteSidebar = dynamic(() => import('./HistorialClienteSidebar'), {
+  ssr: false,
+});
+
 export default function MainLayout() {
   const { cliente, cerrarSesion, cart } = useCart();
   const [carritoAbierto, setCarritoAbierto] = useState(false);
+  const [historialAbierto, setHistorialAbierto] = useState(false);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [mounted, setMounted] = useState(false); // ✅ AGREGADO
 
@@ -60,6 +65,13 @@ export default function MainLayout() {
                 </div>
                 
                 <button
+                  onClick={() => setHistorialAbierto(true)}
+                  className="bg-white/5 hover:bg-white/10 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-2 border border-white/10 transition"
+                >
+                  📋 Mis Pedidos
+                </button>
+
+                <button
                   onClick={() => setCarritoAbierto(true)}
                   className="bg-white/5 hover:bg-white/10 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-2 border border-white/10 transition relative"
                 >
@@ -71,8 +83,8 @@ export default function MainLayout() {
                   )}
                 </button>
 
-                <button 
-                  onClick={cerrarSesion} 
+                <button
+                  onClick={cerrarSesion}
                   className="text-xs text-gray-400 hover:text-red-400 font-bold transition"
                 >
                   Salir
@@ -111,29 +123,32 @@ export default function MainLayout() {
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Comercio Activo</p>
                     <p className="text-sm font-black text-white">{cActivo.nombre_comercio}</p>
                     <p className="text-xs text-gray-400">Identificación: {cActivo.documento || cActivo.numero_cliente}</p>
-                    
-                    <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
-                      <span className="text-xs text-gray-300">Tarifa asignada:</span>
-                      <span className="bg-brand-blue text-white text-[10px] font-black px-2 py-1 rounded-md uppercase">
-                        Lista {cActivo.lista_asignada}
-                      </span>
-                    </div>
                   </div>
 
                   {/* Acciones */}
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => {
                         setCarritoAbierto(true);
                         setMenuMovilAbierto(false);
                       }}
-                      className="w-full bg-white/5 hover:bg-white/10 text-white py-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-white/10 transition"
+                      className="w-full bg-white/5 hover:bg-white/10 text-white py-4 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-1 border border-white/10 transition"
                     >
-                      🛒 Ver mi Carrito ({cantidadItems})
+                      <span>🛒 Carrito</span>
+                      {cantidadItems > 0 && <span className="text-[10px] text-brand-blue font-black">{cantidadItems} items</span>}
                     </button>
-                    <button 
+                    <button
+                      onClick={() => {
+                        setHistorialAbierto(true);
+                        setMenuMovilAbierto(false);
+                      }}
+                      className="w-full bg-white/5 hover:bg-white/10 text-white py-4 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-1 border border-white/10 transition"
+                    >
+                      📋 Mis Pedidos
+                    </button>
+                    <button
                       onClick={cerrarSesion}
-                      className="w-full py-4 text-xs font-bold text-red-400 bg-red-400/5 rounded-xl border border-red-400/10"
+                      className="col-span-2 w-full py-4 text-xs font-bold text-red-400 bg-red-400/5 rounded-xl border border-red-400/10"
                     >
                       Cerrar Sesión
                     </button>
@@ -162,9 +177,15 @@ export default function MainLayout() {
           )}
 
           {/* Panel lateral del carrito */}
-          <CarritoSidebar 
-            isOpen={carritoAbierto} 
-            onClose={() => setCarritoAbierto(false)} 
+          <CarritoSidebar
+            isOpen={carritoAbierto}
+            onClose={() => setCarritoAbierto(false)}
+          />
+
+          {/* Panel lateral de mis pedidos */}
+          <HistorialClienteSidebar
+            isOpen={historialAbierto}
+            onClose={() => setHistorialAbierto(false)}
           />
         </>
       )}
