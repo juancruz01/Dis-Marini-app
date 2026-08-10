@@ -1,6 +1,7 @@
 'use client';
 
 import { getPresignedUploadUrl, deleteFileFromR2 } from '../../../services/mediaService';
+import { resizeImageFile } from '../../../lib/resizeImage';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '../../../lib/supabase';
 import AdminNav from '../../../components/AdminNav';
@@ -224,17 +225,17 @@ export default function GestionProductos() {
   const manejarSubidaImagen = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const archivos = e.target.files;
     if (!archivos || archivos.length === 0) return;
-    const archivo = archivos[0];
+    const archivoOriginal = archivos[0];
     setSubiendoImagen(true);
-    const extension = archivo.name.split('.').pop() || 'jpg';
-    const idUnico = crypto.randomUUID();
-    const r2Key = `productos/${Date.now()}_${idUnico}.${extension}`;
     try {
-      const presignedUrl = await getPresignedUploadUrl(r2Key, archivo.type);
+      const { blob, extension } = await resizeImageFile(archivoOriginal);
+      const idUnico = crypto.randomUUID();
+      const r2Key = `productos/${Date.now()}_${idUnico}.${extension}`;
+      const presignedUrl = await getPresignedUploadUrl(r2Key, blob.type);
       const respuesta = await fetch(presignedUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': archivo.type },
-        body: archivo,
+        headers: { 'Content-Type': blob.type },
+        body: blob,
       });
       if (!respuesta.ok) throw new Error('Error al empujar el archivo a R2');
       if (imagenUrl && imagenUrl !== r2Key) await deleteFileFromR2(imagenUrl);
