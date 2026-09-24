@@ -6,7 +6,7 @@
 export const WHATSAPP_PEDIDOS = '541159320255';
 
 // Ej: '18:00' → "Pedí hasta las 18:00"
-export const HORA_CORTE_PEDIDOS: string | null = null;
+export const HORA_CORTE_PEDIDOS: string | null = '15:00';
 
 // Ej: 'Lunes a viernes'
-export const DIAS_REPARTO: string | null = null;
+export const DIAS_REPARTO: string | null = 'Lunes a sábados';
