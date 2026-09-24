@@ -10,6 +10,13 @@ const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Mismo criterio que la pantalla de Clientes: Lista 3 es la mayorista (la más barata)
+const COLUMNAS_LISTA = {
+  1: 'Lista 1 (minorista)',
+  2: 'Lista 2 (intermedia)',
+  3: 'Lista 3 (mayorista)',
+} as const;
+
 interface Producto {
   id: number;
   nombre: string;
@@ -58,9 +65,9 @@ export default function PreciosPage() {
         'Marca': p.marca,
         'Categoría': p.categoria,
         'Unidad': p.unidad_medida,
-        'Lista 1 (mayorista)': p.precio_lista_1,
-        'Lista 2 (intermedia)': p.precio_lista_2,
-        'Lista 3 (minorista)': p.precio_lista_3,
+        [COLUMNAS_LISTA[1]]: p.precio_lista_1,
+        [COLUMNAS_LISTA[2]]: p.precio_lista_2,
+        [COLUMNAS_LISTA[3]]: p.precio_lista_3,
         'Stock': p.stock_disponible ? 'SI' : 'NO',
       }));
 
@@ -114,12 +121,19 @@ export default function PreciosPage() {
 
         // Validar que tenga las columnas requeridas
         const primeraFila = filas[0];
-        const columnasRequeridas = ['ID (no modificar)', 'Lista 1 (mayorista)', 'Lista 2 (intermedia)', 'Lista 3 (minorista)'];
-        for (const col of columnasRequeridas) {
-          if (!(col in primeraFila)) {
-            throw new Error(`Falta la columna "${col}". Usá el archivo base descargado desde esta página.`);
-          }
+        if (!('ID (no modificar)' in primeraFila)) {
+          throw new Error('Falta la columna "ID (no modificar)". Usá el archivo base descargado desde esta página.');
         }
+
+        // Las columnas de precio se buscan por "Lista N" para seguir aceptando
+        // archivos descargados antes de corregir las etiquetas mayorista/minorista
+        const columnasLista = ([1, 2, 3] as const).map((n) => {
+          const col = Object.keys(primeraFila).find((k) => k.trim().startsWith(`Lista ${n}`));
+          if (!col) {
+            throw new Error(`Falta la columna "${COLUMNAS_LISTA[n]}". Usá el archivo base descargado desde esta página.`);
+          }
+          return col;
+        });
 
         // Mapear a productos
         const productos: Producto[] = filas.map((fila) => ({
@@ -128,9 +142,9 @@ export default function PreciosPage() {
           marca: String(fila['Marca'] ?? ''),
           categoria: String(fila['Categoría'] ?? ''),
           unidad_medida: String(fila['Unidad'] ?? ''),
-          precio_lista_1: Number(fila['Lista 1 (mayorista)']),
-          precio_lista_2: Number(fila['Lista 2 (intermedia)']),
-          precio_lista_3: Number(fila['Lista 3 (minorista)']),
+          precio_lista_1: Number(fila[columnasLista[0]]),
+          precio_lista_2: Number(fila[columnasLista[1]]),
+          precio_lista_3: Number(fila[columnasLista[2]]),
           stock_disponible: String(fila['Stock']).toUpperCase() === 'SI',
         }));
 

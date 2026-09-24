@@ -14,7 +14,11 @@ export default function GestionProductos() {
   const [cargando, setCargando] = useState(true);
   const [autenticado, setAutenticado] = useState(false);
   const [imagenUrl, setImagenUrl] = useState('');
+  // Imagen que tenía el producto al abrir el modal: solo se borra de R2 cuando
+  // se guarda con otra imagen, no al subir (el admin todavía puede cancelar)
+  const [imagenOriginal, setImagenOriginal] = useState('');
   const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const [guardando, setGuardando] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Buscador y selección ──────────────────────────────────────────────────
@@ -156,7 +160,7 @@ export default function GestionProductos() {
     setNombre(''); setMarca(''); setCategoria('');
     setUnidadMedida('Kilo');
     setPrecio1(0); setPrecio2(0); setPrecio3(0);
-    setStock(true); setInfoAdicional(''); setImagenUrl('');
+    setStock(true); setInfoAdicional(''); setImagenUrl(''); setImagenOriginal('');
     setPesoEstimado(null);
     setModalAbierto(true);
   };
@@ -169,13 +173,30 @@ export default function GestionProductos() {
     setStock(p.stock_disponible);
     setInfoAdicional(p.informacion_adicional || '');
     setImagenUrl(p.imagen_url || '');
+    setImagenOriginal(p.imagen_url || '');
     setPesoEstimado(p.peso_estimado ?? null);
     setModalAbierto(true);
   };
 
+  // Borra de R2 sin frenar el flujo: si falla, queda un archivo huérfano pero el producto está bien
+  const borrarImagenSinBloquear = async (key: string) => {
+    try {
+      await deleteFileFromR2(key);
+    } catch (err) {
+      console.error('No se pudo borrar la imagen de R2:', err);
+    }
+  };
+
+  const cerrarModal = () => {
+    // Una foto subida en este modal que no se guardó quedaría huérfana en R2
+    if (imagenUrl && imagenUrl !== imagenOriginal) borrarImagenSinBloquear(imagenUrl);
+    setModalAbierto(false);
+  };
+
   const guardarProducto = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCargando(true);
+    if (guardando || subiendoImagen) return;
+    setGuardando(true);
     const datosProducto = {
       nombre, marca, categoria,
       unidad_medida: unidadMedida,
@@ -195,13 +216,17 @@ export default function GestionProductos() {
         const { error } = await supabase.from('productos').insert([datosProducto]);
         if (error) throw error;
       }
+      // Recién ahora que el producto apunta a la foto nueva, se puede borrar la vieja
+      if (imagenOriginal && imagenOriginal !== datosProducto.imagen_url) {
+        await borrarImagenSinBloquear(imagenOriginal);
+      }
       setModalAbierto(false);
       cargarProductos();
     } catch (err) {
       const errorDeSupabase = err as { message?: string };
       alert(`Hubo un error: ${errorDeSupabase.message || 'Consulte la consola para más detalles.'}`);
     } finally {
-      setCargando(false);
+      setGuardando(false);
     }
   };
 
@@ -210,9 +235,10 @@ export default function GestionProductos() {
     setCargando(true);
     try {
       const productoAEliminar = productos.find((p) => p.id === id);
-      if (productoAEliminar?.imagen_url) await deleteFileFromR2(productoAEliminar.imagen_url);
+      // Primero la fila: si el delete falla (ej. el producto está en pedidos), la foto sigue intacta
       const { error } = await supabase.from('productos').delete().eq('id', id);
       if (error) throw error;
+      if (productoAEliminar?.imagen_url) await borrarImagenSinBloquear(productoAEliminar.imagen_url);
       cargarProductos();
     } catch (err) {
       console.error('Error al eliminar producto:', err);
@@ -238,7 +264,9 @@ export default function GestionProductos() {
         body: blob,
       });
       if (!respuesta.ok) throw new Error('Error al empujar el archivo a R2');
-      if (imagenUrl && imagenUrl !== r2Key) await deleteFileFromR2(imagenUrl);
+      // Si ya se había subido otra foto en este mismo modal, esa sí se descarta.
+      // La original del producto se conserva hasta guardar.
+      if (imagenUrl && imagenUrl !== imagenOriginal) await borrarImagenSinBloquear(imagenUrl);
       setImagenUrl(r2Key);
       alert('¡Imagen subida a Cloudflare con éxito!');
     } catch (err) {
@@ -246,6 +274,8 @@ export default function GestionProductos() {
       alert('No se pudo subir la imagen.');
     } finally {
       setSubiendoImagen(false);
+      // Permite volver a elegir el mismo archivo (si no, onChange no se dispara)
+      e.target.value = '';
     }
   };
 
@@ -576,8 +606,10 @@ export default function GestionProductos() {
               </div>
 
               <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
-                <button type="button" onClick={() => setModalAbierto(false)} className="px-4 py-2 bg-gray-100 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition">Cancelar</button>
-                <button type="submit" className="px-5 py-2 bg-brand-blue text-white rounded-xl font-bold hover:bg-brand-dark transition">Guardar Cambios</button>
+                <button type="button" onClick={cerrarModal} disabled={guardando || subiendoImagen} className="px-4 py-2 bg-gray-100 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition disabled:opacity-50">Cancelar</button>
+                <button type="submit" disabled={guardando || subiendoImagen} className="px-5 py-2 bg-brand-blue text-white rounded-xl font-bold hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed">
+                  {guardando ? 'Guardando...' : subiendoImagen ? 'Esperando foto...' : 'Guardar Cambios'}
+                </button>
               </div>
             </form>
           </div>

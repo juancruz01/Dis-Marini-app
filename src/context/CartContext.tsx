@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { calcularPrecioAplicado } from '../lib/precios';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -123,18 +124,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     setCart((prevCart) => {
       // Resolvemos el precio dentro del setter para tener acceso al cliente más reciente
       // a través del closure, sin necesidad de declararlo como dependencia.
-      const listaActual = cliente?.lista_asignada ?? 3;
-
-      const precioBase =
-        listaActual === 1 ? producto.precio_lista_1 :
-        listaActual === 2 ? producto.precio_lista_2 :
-        producto.precio_lista_3;
-
-      const esVentaPorPeso =
-        producto.unidad_medida.toLowerCase() === 'horma' ||
-        producto.unidad_medida.toLowerCase() === 'pieza';
-
-      const precioFinalCalculado = esVentaPorPeso ? precioBase * 3.5 : precioBase;
+      // Sin cliente se usa la lista 1 (la más cara) para no regalar precio mayorista
+      const listaActual = cliente?.lista_asignada ?? 1;
+      const precioFinalCalculado = calcularPrecioAplicado(producto, listaActual);
 
       const itemExiste = prevCart.find((item) => item.producto.id === producto.id);
 

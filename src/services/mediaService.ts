@@ -7,7 +7,7 @@ import { requerirSesionAdmin } from '../lib/supabase.server';
 
 // Genera una URL temporal para visualizar la imagen en el catálogo
 export const getPresignedUrl = async (fileKey: string | null): Promise<string> => {
-  if (!fileKey) return '/productos/placeholder.jpg';
+  if (!fileKey) return '/productos/placeholder.svg';
   
   // Si ya es una URL completa o un placeholder local, la devolvemos directo
   if (fileKey.startsWith('http') || fileKey.startsWith('/')) {
@@ -23,7 +23,7 @@ export const getPresignedUrl = async (fileKey: string | null): Promise<string> =
     return await getSignedUrl(r2Client, command, { expiresIn: 3600 });
   } catch (error) {
     console.error('Error generando URL de Cloudflare R2:', error);
-    return '/productos/placeholder.jpg';
+    return '/productos/placeholder.svg';
   }
 };
 

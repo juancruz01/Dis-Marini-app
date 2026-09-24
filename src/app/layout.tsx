@@ -6,6 +6,8 @@ import { CartProvider } from "../context/CartContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  // Base para resolver las rutas relativas de las imágenes de Open Graph / Twitter
+  metadataBase: new URL('https://distribuidora-marini.vercel.app'),
   title: 'Distribuidora Marini | Catálogo Mayorista',
   description: 'Comprá fiambres, lácteos y productos mayoristas al mejor precio. Distribución directa para comercios.',
   keywords: ['distribuidora marini', 'fiambres mayorista', 'lácteos por mayor', 'catálogo mayorista', 'marini web'],
@@ -23,9 +25,9 @@ export const metadata: Metadata = {
     siteName: 'Distribuidora Marini',
     images: [
       {
-        url: 'https://distribuidora-marini.vercel.app/logo-app.jpg', // Ruta absoluta a la imagen de portada
-        width: 1200,
-        height: 630,
+        url: '/Marini-AZUL.png',
+        width: 2000,
+        height: 1414,
         alt: 'Distribuidora Marini Catálogo',
       },
     ],
@@ -38,7 +40,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Distribuidora Marini | Catálogo Mayorista',
     description: 'Catálogo online exclusivo para comercios con tarifas personalizadas.',
-    images: ['https://tu-dominio-de-vercel.vercel.app/og-image.jpg'],
+    images: ['/Marini-AZUL.png'],
   },
 };
 

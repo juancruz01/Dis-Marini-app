@@ -2,12 +2,19 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { useCart, Producto } from '../context/CartContext';
+import { useCart } from '../context/CartContext';
+import type { Producto } from '../context/CartContext';
+import {
+  precioSegunLista,
+  calcularPrecioAplicado,
+  esVentaPorPeso,
+  pesoParaEstimar,
+} from '../lib/precios';
 import Image from 'next/image';
 import { getPresignedUrl } from '../services/mediaService';
 
 export const ImagenProductoR2 = ({ imagenKey, nombre }: { imagenKey: string | null, nombre: string }) => {
-  const [urlFinal, setUrlFinal] = useState('/productos/placeholder.jpg');
+  const [urlFinal, setUrlFinal] = useState('/productos/placeholder.svg');
 
   useEffect(() => {
     let activo = true;
@@ -93,12 +100,7 @@ export default function Catalogo() {
     setTimeout(actualizarFlechas, 50);
   }, [categorias, actualizarFlechas]);
 
-  const obtenerPrecioSegunLista = (producto: Producto): number => {
-    const listaActual = cliente ? cliente.lista_asignada : 3;
-    if (listaActual === 1) return producto.precio_lista_1;
-    if (listaActual === 2) return producto.precio_lista_2;
-    return producto.precio_lista_3;
-  };
+  const listaActual = cliente ? cliente.lista_asignada : 1;
 
   const productosFiltrados = productos.filter((producto) => {
     const coincideBusqueda =
@@ -196,7 +198,7 @@ export default function Catalogo() {
           </div>
         ) : (
           productosFiltrados.map((producto) => {
-            const precioFinal = obtenerPrecioSegunLista(producto);
+            const precioFinal = precioSegunLista(producto, listaActual);
             const cantidadEnCarrito = obtenerCantidadEnCarrito(producto.id);
 
             return (
@@ -239,13 +241,11 @@ export default function Catalogo() {
                       ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
 
-                    {/* Estimado para horma y pieza — solo si tiene peso_estimado cargado */}
-                    {(producto.unidad_medida.toLowerCase() === 'horma' ||
-                      producto.unidad_medida.toLowerCase() === 'pieza') &&
-                      producto.peso_estimado && (
+                    {/* Estimado para horma y pieza — mismo cálculo que usa el carrito */}
+                    {esVentaPorPeso(producto) && (
                         <span className="block text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 border border-amber-100">
-                          Aprox: ${(precioFinal * producto.peso_estimado).toLocaleString('es-AR')} 
-                          {' '}x {producto.unidad_medida} ({producto.peso_estimado}kg)
+                          Aprox: ${calcularPrecioAplicado(producto, listaActual).toLocaleString('es-AR')}
+                          {' '}x {producto.unidad_medida} ({pesoParaEstimar(producto)}kg)
                         </span>
                     )}
 

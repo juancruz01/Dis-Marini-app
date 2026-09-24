@@ -25,7 +25,7 @@ export default function GestionClientes() {
   const [idEditando, setIdEditando] = useState<number | null>(null);
   const [documento, setDocumento] = useState('');
   const [nombreComercio, setNombreComercio] = useState('');
-  const [listaAsignada, setListaAsignada] = useState(3);
+  const [listaAsignada, setListaAsignada] = useState(1);
   const [telefono, setTelefono] = useState('');
 
   // Validar sesión de administrador
@@ -66,7 +66,8 @@ export default function GestionClientes() {
     const sugerido = Math.floor(1000 + Math.random() * 9000).toString();
     setDocumento(sugerido);
     setNombreComercio('');
-    setListaAsignada(3);
+    // Por defecto la lista más cara; la mayorista (3) hay que elegirla a propósito
+    setListaAsignada(1);
     setTelefono('');
     setModalAbierto(true);
   };

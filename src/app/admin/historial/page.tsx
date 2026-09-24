@@ -147,9 +147,11 @@ export default function HistorialPage() {
     );
   });
 
-  const totalVentas = pedidosFiltrados.reduce((a, p) => a + p.total_estimado, 0);
-  const ticketPromedio = pedidosFiltrados.length ? totalVentas / pedidosFiltrados.length : 0;
-  const gastoPorCliente = pedidosFiltrados.reduce<Record<string, number>>((acc, p) => {
+  // Los cancelados se listan pero no cuentan como venta
+  const pedidosValidos = pedidosFiltrados.filter((p) => p.estado !== 'cancelado');
+  const totalVentas = pedidosValidos.reduce((a, p) => a + p.total_estimado, 0);
+  const ticketPromedio = pedidosValidos.length ? totalVentas / pedidosValidos.length : 0;
+  const gastoPorCliente = pedidosValidos.reduce<Record<string, number>>((acc, p) => {
     const key = p.cliente_nombre ?? p.cliente_id;
     acc[key] = (acc[key] ?? 0) + p.total_estimado;
     return acc;
@@ -269,7 +271,11 @@ export default function HistorialPage() {
           <div className="bg-white border border-brand-dark/10 rounded-xl p-3 sm:p-5 shadow-sm">
             <p className="text-[9px] sm:text-[10px] text-brand-dark/40 font-bold uppercase tracking-widest mb-1">Total</p>
             <p className="text-base sm:text-2xl font-black text-brand-dark leading-tight">{formatPeso(totalVentas)}</p>
-            <p className="text-[9px] text-brand-dark/40 mt-0.5">{pedidosFiltrados.length} ped.</p>
+            <p className="text-[9px] text-brand-dark/40 mt-0.5">
+              {pedidosValidos.length} ped.
+              {pedidosFiltrados.length > pedidosValidos.length &&
+                ` (+${pedidosFiltrados.length - pedidosValidos.length} canc.)`}
+            </p>
           </div>
           <div className="bg-white border border-brand-dark/10 rounded-xl p-3 sm:p-5 shadow-sm">
             <p className="text-[9px] sm:text-[10px] text-brand-dark/40 font-bold uppercase tracking-widest mb-1">Promedio</p>

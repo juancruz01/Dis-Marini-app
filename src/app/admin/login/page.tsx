@@ -15,7 +15,12 @@ function LoginForm() {
   const [intentos, setIntentos] = useState(0);
 
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') ?? '/admin/productos';
+  // Solo aceptamos rutas internas del panel: evita redirecciones a otros sitios
+  // y URLs "javascript:" que ejecutarían código con la sesión del admin.
+  const redirectSolicitado = searchParams.get('redirectTo') ?? '';
+  const redirectTo = /^\/admin(\/|$|\?)/.test(redirectSolicitado)
+    ? redirectSolicitado
+    : '/admin/productos';
 
   const bloqueado = intentos >= 5;
 

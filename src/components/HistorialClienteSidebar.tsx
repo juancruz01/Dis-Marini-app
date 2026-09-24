@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
+import { cancelarPedido as cancelarPedidoServidor } from '../services/pedidosService';
 
 interface ItemPedido {
   id: string;
@@ -99,13 +100,9 @@ export default function HistorialClienteSidebar({ isOpen, onClose }: HistorialCl
 
     setCancelando(pedidoId);
     try {
-      const { error: sbError } = await supabase
-        .from('pedidos')
-        .update({ estado: 'cancelado' })
-        .eq('id', pedidoId)
-        .eq('cliente_id', cliente.numero_cliente);
-
-      if (sbError) throw sbError;
+      // Va por el servidor: el navegador ya no tiene permiso de modificar pedidos
+      const resultado = await cancelarPedidoServidor(cliente.numero_cliente, pedidoId);
+      if (!resultado.ok) throw new Error(resultado.error);
 
       setPedidos((prev) =>
         prev.map((p) => (p.id === pedidoId ? { ...p, estado: 'cancelado' } : p))

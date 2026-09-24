@@ -13,7 +13,7 @@ const ImagenCarrito = ({
   imagenKey: string | null;
   nombre: string;
 }) => {
-  const placeholder = '/productos/placeholder.jpg';
+  const placeholder = '/productos/placeholder.svg';
 
   // 1. Calculamos si el producto tiene una imagen válida de forma síncrona
   const tieneImagenValida = imagenKey && !imagenKey.includes('placeholder');

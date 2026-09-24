@@ -1,14 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useCart } from '../context/CartContext';
-
-// ─── Supabase ─────────────────────────────────────────────────────────────────
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { crearPedido, type ItemConfirmado } from '../services/pedidosService';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface ModalCheckoutProps {
@@ -29,40 +23,11 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
 
   if (!isOpen || !cliente) return null;
 
+  // Estimado para mostrar; el total real lo calcula el servidor al confirmar
   const total = obtenerTotal();
 
-  // ─── 1. Guardar en Supabase ────────────────────────────────────────────────
-  const guardarEnSupabase = async (): Promise<string> => {
-    const { data: pedidoData, error: pedidoError } = await supabase
-      .from('pedidos')
-      .insert({
-        cliente_id: cliente.numero_cliente,
-        total_estimado: total,
-        estado: 'confirmado',
-      })
-      .select('id')
-      .single();
-
-    if (pedidoError || !pedidoData) {
-      throw new Error(pedidoError?.message ?? 'No se pudo crear el pedido');
-    }
-
-    const items = cart.map((item) => ({
-      pedido_id: pedidoData.id,
-      producto_id: item.producto.id,
-      producto_nombre: item.producto.nombre,
-      cantidad: item.cantidad,
-      precio_unitario: item.precioAplicado,
-    }));
-
-    const { error: itemsError } = await supabase.from('items_pedido').insert(items);
-    if (itemsError) throw new Error(itemsError.message);
-
-    return pedidoData.id as string;
-  };
-
-  // ─── 2. Armar mensaje WhatsApp ─────────────────────────────────────────────
-  const armarMensaje = (pedidoId: string) => {
+  // ─── 1. Armar mensaje WhatsApp (con los precios que confirmó el servidor) ──
+  const armarMensaje = (pedidoId: string, items: ItemConfirmado[], totalConfirmado: number) => {
     let msg = `*📦 NUEVO PEDIDO - DISTRIBUIDORA MARINI*\n`;
     msg += `-------------------------------------------\n`;
     msg += `*Comercio:* ${cliente.nombre_comercio}\n`;
@@ -73,38 +38,44 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
     msg += `-------------------------------------------\n\n`;
     msg += `*DETALLE DEL PEDIDO:*\n`;
 
-    cart.forEach((item) => {
-      const sub = item.precioAplicado * item.cantidad;
-      msg += `• ${item.cantidad} x ${item.producto.nombre} (${item.producto.marca})\n`;
-      msg += `  _$${item.precioAplicado.toLocaleString('es-AR')} c/u | Subtotal: $${sub.toLocaleString('es-AR')}_\n\n`;
+    items.forEach((item) => {
+      msg += `• ${item.cantidad} x ${item.nombre} (${item.marca})\n`;
+      msg += `  _$${item.precio_unitario.toLocaleString('es-AR')} c/u | Subtotal: $${item.subtotal.toLocaleString('es-AR')}_\n\n`;
     });
 
     msg += `-------------------------------------------\n`;
-    msg += `*TOTAL ESTIMADO:* $${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}\n`;
+    msg += `*TOTAL ESTIMADO:* $${totalConfirmado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}\n`;
     msg += `_⚠️ Sujeto a variaciones según peso final de balanza._`;
 
     return msg;
   };
 
-  // ─── 3. Handler principal ──────────────────────────────────────────────────
+  // ─── 2. Handler principal ──────────────────────────────────────────────────
   const handleConfirmar = async (e: React.FormEvent) => {
     e.preventDefault();
     setPaso('enviando');
     setErrorMsg('');
 
+    // Se abre antes del await para que el navegador no la bloquee como popup
+    const ventanaWsp = window.open('', '_blank');
+
     try {
-      const ventanaWsp = window.open('', '_blank');
-      
-      const pedidoId = await guardarEnSupabase();
-      const mensaje = armarMensaje(pedidoId);
+      // Solo mandamos producto + cantidad: precios y total los resuelve el servidor
+      const resultado = await crearPedido(
+        cliente.numero_cliente,
+        cart.map((item) => ({ producto_id: item.producto.id, cantidad: item.cantidad }))
+      );
+      if (!resultado.ok) throw new Error(resultado.error);
+
+      const mensaje = armarMensaje(resultado.pedidoId, resultado.items, resultado.total);
       const url = `https://api.whatsapp.com/send?phone=541159320255&text=${encodeURIComponent(mensaje)}`;
 
       if (ventanaWsp) {
-      ventanaWsp.location.href = url;
-    } else {
-      // Fallback por si igual fue bloqueada
-      window.open(url, '_blank');
-    }
+        ventanaWsp.location.href = url;
+      } else {
+        // Fallback por si igual fue bloqueada
+        window.open(url, '_blank');
+      }
 
       setPaso('exito');
 
@@ -115,6 +86,8 @@ export default function ModalCheckout({ isOpen, onClose }: ModalCheckoutProps) {
         setComentarios('');
       }, 2000);
     } catch (err: unknown) {
+      // Si el pedido no se guardó, cerramos la pestaña que quedó en blanco
+      ventanaWsp?.close();
       const msg = err instanceof Error ? err.message : 'Error al procesar el pedido';
       setErrorMsg(msg);
       setPaso('error');
