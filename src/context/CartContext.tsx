@@ -42,7 +42,19 @@ interface CartContextType {
   limpiarCarrito: () => void;
   cerrarSesion: () => void;
   obtenerTotal: () => number;
+  aviso: Aviso | null;
+  mostrarAviso: (texto: string) => void;
+  descartarAviso: () => void;
 }
+
+// Mensaje breve que confirma una acción (ej. "Queso agregado · 2 hormas")
+export interface Aviso {
+  id: number;
+  texto: string;
+}
+
+// Mismo tope que valida el servidor al crear el pedido
+export const CANTIDAD_MAXIMA = 9999;
 
 // ─── Helpers de sessionStorage ────────────────────────────────────────────────
 
@@ -86,6 +98,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   // hydration mismatch: servidor devolvía [] pero cliente leía sessionStorage.
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cliente, setCliente] = useState<ClienteActivo | null>(null);
+  const [aviso, setAviso] = useState<Aviso | null>(null);
 
   // ✅ Cargamos sessionStorage una sola vez, después de la hidratación.
   useEffect(() => {
@@ -133,12 +146,15 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       if (itemExiste) {
         return prevCart.map((item) =>
           item.producto.id === producto.id
-            ? { ...item, cantidad: item.cantidad + cantidad }
+            ? { ...item, cantidad: Math.min(CANTIDAD_MAXIMA, item.cantidad + cantidad) }
             : item
         );
       }
 
-      return [...prevCart, { producto, cantidad, precioAplicado: precioFinalCalculado }];
+      return [
+        ...prevCart,
+        { producto, cantidad: Math.min(CANTIDAD_MAXIMA, cantidad), precioAplicado: precioFinalCalculado },
+      ];
     });
   }, [cliente]);
 
@@ -153,7 +169,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
     setCart((prev) =>
       prev.map((item) =>
-        item.producto.id === productoId ? { ...item, cantidad } : item
+        item.producto.id === productoId
+          ? { ...item, cantidad: Math.min(CANTIDAD_MAXIMA, cantidad) }
+          : item
       )
     );
   }, [eliminarDelCarrito]);
@@ -174,6 +192,12 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     return cart.reduce((acc, item) => acc + item.precioAplicado * item.cantidad, 0);
   }, [cart]);
 
+  const mostrarAviso = useCallback((texto: string) => {
+    setAviso({ id: Date.now(), texto });
+  }, []);
+
+  const descartarAviso = useCallback(() => setAviso(null), []);
+
   return (
     <CartContext.Provider
       value={{
@@ -186,6 +210,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         limpiarCarrito,
         cerrarSesion,
         obtenerTotal,
+        aviso,
+        mostrarAviso,
+        descartarAviso,
       }}
     >
       {children}

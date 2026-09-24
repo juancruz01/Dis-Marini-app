@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
+import { ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
 
@@ -15,14 +17,13 @@ export default function ModalIngreso() {
   const manejarIngresoAbonado = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     const docLimpio = documentoIngresado.trim();
     if (!docLimpio) return;
 
     setCargando(true);
 
     try {
-      // Consultamos usando la nueva columna 'documento'
       const { data: clienteEncontrado, error: dbError } = await supabase
         .from('clientes')
         .select('documento, nombre_comercio, lista_asignada')
@@ -32,12 +33,11 @@ export default function ModalIngreso() {
       if (dbError) throw dbError;
 
       if (!clienteEncontrado) {
-        setError('El DNI o CUIT no corresponde a un comercio habilitado. Verifíquelo o comuníquese con la distribuidora.');
+        setError('Ese DNI o CUIT no corresponde a un comercio habilitado. Revisalo o comunicate con la distribuidora.');
         setCargando(false);
         return;
       }
 
-      // Pasamos el documento al estado global del carrito
       definirCliente(
         clienteEncontrado.documento,
         clienteEncontrado.nombre_comercio,
@@ -45,63 +45,70 @@ export default function ModalIngreso() {
       );
     } catch (err) {
       console.error(err);
-      setError('Hubo un error de conexión. Intente nuevamente.');
+      setError('Hubo un error de conexión. Intentá nuevamente.');
     } finally {
       setCargando(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-brand-dark/40 backdrop-blur-md flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-100 relative overflow-hidden">
-        
-        <div className="absolute top-0 left-0 right-0 h-2 bg-brand-blue" />
+    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-brand-light">
+      <div className="h-44 shrink-0 bg-brand-dark sm:h-56" aria-hidden="true" />
 
-        {/* Encabezado */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-brand-light rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner text-brand-blue">
-            📦
-          </div>
-          <h2 className="text-2xl font-black text-brand-dark tracking-tight">Distribuidora Marini</h2>
-          <p className="text-gray-500 text-sm mt-2 px-2">
-            Exclusivo para comercios. Ingrese sus datos para operar con su tarifa asignada.
-          </p>
-        </div>
-
-        {/* Formulario */}
-        <form onSubmit={manejarIngresoAbonado} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-brand-dark uppercase tracking-wider mb-2 text-center">
-              🪪 Identificación del Comercio
-            </label>
-            <input
-              type="text"
-              placeholder="DNI o CUIT (sin guiones)"
-              disabled={cargando}
-              className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl text-center font-mono text-xl text-brand-dark focus:ring-4 focus:ring-brand-blue/10 focus:border-brand-blue outline-none transition disabled:bg-gray-50 bg-gray-50 font-bold placeholder:text-gray-300 placeholder:font-sans placeholder:text-base"
-              value={documentoIngresado}
-              onChange={(e) => setDocumentoIngresado(e.target.value)}
-            />
+      <div className="-mt-28 flex flex-1 justify-center px-4 pb-8 sm:-mt-36">
+        <div className="h-fit w-full max-w-md rounded-3xl bg-white p-7 shadow-[0_20px_50px_rgba(0,48,87,0.15)]">
+          <div className="mb-7 flex flex-col items-center gap-5 text-center">
+            <Image src="/marini-logo-azul.png" alt="Distribuidora Marini" width={200} height={43} priority />
+            <div>
+              <h1 className="text-[22px] font-extrabold text-brand-ink">Catálogo para comercios</h1>
+              <p className="mt-1.5 text-[15px] text-brand-muted">
+                Ingresá con el DNI o CUIT de tu comercio para ver tus precios y hacer pedidos.
+              </p>
+            </div>
           </div>
 
-          {error && (
-            <p className="text-red-600 text-xs text-center font-semibold bg-red-50 border border-red-100 p-3 rounded-xl animate-pulse">
-              {error}
-            </p>
-          )}
+          <form onSubmit={manejarIngresoAbonado} className="space-y-4">
+            <div>
+              <label htmlFor="documento-comercio" className="mb-2 block text-[13px] font-bold text-brand-muted">
+                DNI o CUIT (sin guiones)
+              </label>
+              <input
+                id="documento-comercio"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Ej: 20123456789"
+                disabled={cargando}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? 'error-ingreso' : undefined}
+                className="h-14 w-full rounded-xl border-2 border-brand-line bg-brand-light/50 px-4 text-center text-xl font-bold tracking-wider text-brand-ink outline-none transition placeholder:text-base placeholder:font-medium placeholder:tracking-normal placeholder:text-[#8A99A8] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/15 disabled:opacity-60"
+                value={documentoIngresado}
+                onChange={(e) => setDocumentoIngresado(e.target.value)}
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={cargando}
-            className="w-full bg-brand-dark text-white font-bold py-4 rounded-xl hover:bg-brand-blue active:scale-[0.99] transition-all duration-200 disabled:bg-gray-300 flex items-center justify-center gap-2 shadow-lg shadow-brand-dark/10 text-sm uppercase tracking-wider"
-          >
-            {cargando ? (
-              <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              'Acceder a mis Precios'
+            {error && (
+              <p id="error-ingreso" role="alert" className="rounded-xl border border-[#F1C4BE] bg-[#FDECEA] p-3 text-center text-sm font-semibold text-[#B42318]">
+                {error}
+              </p>
             )}
-          </button>
-        </form>
+
+            <button
+              type="submit"
+              disabled={cargando || !documentoIngresado.trim()}
+              className="flex h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-brand-dark text-[15px] font-bold text-white transition hover:bg-brand-ink active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {cargando ? (
+                <span className="size-5 animate-spin rounded-full border-2 border-white border-t-transparent" aria-label="Ingresando" />
+              ) : (
+                <>
+                  Ver mis precios
+                  <ArrowRight className="size-5" aria-hidden="true" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

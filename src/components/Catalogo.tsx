@@ -1,38 +1,27 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { Check, Clock, Plus, Search, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import type { Producto } from '../context/CartContext';
-import {
-  precioSegunLista,
-  calcularPrecioAplicado,
-  esVentaPorPeso,
-  pesoParaEstimar,
-} from '../lib/precios';
-import Image from 'next/image';
-
-// Las URLs firmadas llegan precargadas desde MainLayout; si falta alguna se ve el placeholder
-const ImagenProductoR2 = ({ url, nombre }: { url: string | undefined, nombre: string }) => {
-  return (
-    <Image
-      src={url ?? '/productos/placeholder.svg'}
-      alt={nombre}
-      fill
-      sizes="80px"
-      className="object-cover"
-    />
-  );
-};
+import { precioSegunLista } from '../lib/precios';
+import { etiquetaCantidad, formatearPrecio, normalizarTexto, sufijoPrecio } from '../lib/formato';
+import { HORA_CORTE_PEDIDOS } from '../lib/config';
+import EncabezadoVista from './tienda/EncabezadoVista';
+import ImagenProducto from './tienda/ImagenProducto';
+import TarjetaProducto from './tienda/TarjetaProducto';
 
 interface CatalogoProps {
   productos: Producto[];
   urlsImagenes: Record<string, string>;
   cargando: boolean;
+  frecuentes: Producto[];
 }
 
 // Los datos se cargan en MainLayout (usePrecargaCatalogo) para empezar antes del ingreso
-export default function Catalogo({ productos, urlsImagenes, cargando }: CatalogoProps) {
-  const { cliente, agregarAlCarrito, cart, actualizarCantidad } = useCart();
+export default function Catalogo({ productos, urlsImagenes, cargando, frecuentes }: CatalogoProps) {
+  const { cliente, agregarAlCarrito, cart, actualizarCantidad, mostrarAviso } = useCart();
+  const lista = cliente?.lista_asignada ?? 1;
 
   const [busqueda, setBusqueda] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todos');
@@ -42,228 +31,204 @@ export default function Catalogo({ productos, urlsImagenes, cargando }: Catalogo
     [productos]
   );
 
-  // ─── Ref y estado para las flechas del carrusel de categorías ────────────
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [puedeIzquierda, setPuedeIzquierda] = useState(false);
-  const [puedeDerecha, setPuedeDerecha] = useState(false);
+  const cantidades = useMemo(
+    () => new Map(cart.map((item) => [item.producto.id, item.cantidad])),
+    [cart]
+  );
 
-  const actualizarFlechas = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setPuedeIzquierda(el.scrollLeft > 4);
-    setPuedeDerecha(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  }, []);
+  const productosFiltrados = useMemo(() => {
+    const termino = normalizarTexto(busqueda);
+    return productos.filter((producto) => {
+      const coincideCategoria =
+        categoriaSeleccionada === 'Todos' || producto.categoria === categoriaSeleccionada;
+      if (!coincideCategoria) return false;
+      if (!termino) return true;
+      return normalizarTexto(`${producto.nombre} ${producto.marca} ${producto.categoria}`).includes(termino);
+    });
+  }, [productos, busqueda, categoriaSeleccionada]);
 
-  useEffect(() => {
-    actualizarFlechas();
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', actualizarFlechas);
-    return () => el.removeEventListener('scroll', actualizarFlechas);
-  }, [categorias, actualizarFlechas]);
-
-  const scrollear = (dir: 'izquierda' | 'derecha') => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir === 'derecha' ? 200 : -200, behavior: 'smooth' });
+  const agregar = (producto: Producto) => {
+    const nuevaCantidad = (cantidades.get(producto.id) ?? 0) + 1;
+    agregarAlCarrito(producto, 1);
+    mostrarAviso(`${producto.nombre} · ${etiquetaCantidad(producto.unidad_medida, nuevaCantidad)}`);
   };
 
-  // Recalcular flechas cuando cambian las categorías
-  useEffect(() => {
-    setTimeout(actualizarFlechas, 50);
-  }, [categorias, actualizarFlechas]);
-
-  const listaActual = cliente ? cliente.lista_asignada : 1;
-
-  const productosFiltrados = productos.filter((producto) => {
-    const coincideBusqueda =
-      producto.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      producto.marca.toLowerCase().includes(busqueda.toLowerCase());
-    const coincideCategoria =
-      categoriaSeleccionada === 'Todos' || producto.categoria === categoriaSeleccionada;
-    return coincideBusqueda && coincideCategoria;
-  });
-
-  const obtenerCantidadEnCarrito = (productoId: number): number => {
-    const item = cart.find((i) => i.producto.id === productoId);
-    return item ? item.cantidad : 0;
-  };
-
-  if (cargando) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <span className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-semibold text-brand-dark/60">Cargando catálogo mayorista...</p>
-      </div>
-    );
-  }
+  const filtrando = busqueda.trim() !== '' || categoriaSeleccionada !== 'Todos';
 
   return (
-    <div className="space-y-6">
-
-      {/* BUSCADOR Y FILTROS */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm space-y-4">
-
-        {/* Buscador */}
-        <div className="relative">
+    <>
+      <EncabezadoVista
+        extra={
+          HORA_CORTE_PEDIDOS && (
+            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-[#B9C9DA]">
+              <Clock className="size-3.5" aria-hidden="true" />
+              Pedí hasta las {HORA_CORTE_PEDIDOS}
+            </span>
+          )
+        }
+      >
+        <div>
+          <p className="text-[13px] font-medium text-[#B9C9DA]">Hola,</p>
+          <h1 className="text-[21px] font-extrabold leading-tight tracking-tight text-white">
+            {cliente?.nombre_comercio}
+          </h1>
+        </div>
+        <label className="flex h-12 items-center gap-2.5 rounded-xl bg-white px-3.5 text-brand-muted focus-within:ring-4 focus-within:ring-brand-blue/30">
+          <Search className="size-5 shrink-0" aria-hidden="true" />
           <input
-            type="text"
-            placeholder="🔍 Buscar por producto o marca (Ej: Barraza, Cremoso...)"
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 text-sm font-medium transition text-gray-800 bg-gray-50/50"
+            type="search"
+            placeholder="Buscar producto o marca"
+            aria-label="Buscar producto o marca"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-[15px] text-brand-ink outline-none placeholder:text-brand-muted [&::-webkit-search-cancel-button]:hidden"
           />
-        </div>
+          {busqueda && (
+            <button
+              type="button"
+              onClick={() => setBusqueda('')}
+              aria-label="Borrar búsqueda"
+              className="grid size-9 place-items-center rounded-lg text-brand-muted hover:bg-brand-light"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
+          )}
+        </label>
+      </EncabezadoVista>
 
-        {/* Categorías con flechas en desktop */}
-        <div className="relative flex items-center gap-1">
-
-          {/* Flecha izquierda — solo desktop */}
-          <button
-            onClick={() => scrollear('izquierda')}
-            disabled={!puedeIzquierda}
-            className={`hidden md:flex shrink-0 items-center justify-center w-8 h-8 rounded-full border border-gray-200 bg-white shadow-sm transition
-              ${puedeIzquierda ? 'text-brand-dark hover:bg-gray-50 hover:border-brand-blue' : 'text-gray-300 cursor-default'}`}
-            aria-label="Desplazar categorías a la izquierda"
-          >
-            ‹
-          </button>
-
-          {/* Contenedor scrolleable */}
-          <div
-            ref={scrollRef}
-            className="flex gap-2 overflow-x-auto pb-1 scrollbar-none snap-x flex-1"
-            onScroll={actualizarFlechas}
-          >
-            {categorias.map((cat) => (
+      {/* Categorías: quedan fijas arriba al hacer scroll */}
+      <div className="sticky top-0 z-20 bg-brand-light/95 backdrop-blur md:top-16">
+        <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-3 scrollbar-none md:flex-wrap">
+          {categorias.map((categoria) => {
+            const activa = categoria === categoriaSeleccionada;
+            return (
               <button
-                key={cat}
-                onClick={() => setCategoriaSeleccionada(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-150 whitespace-nowrap snap-start ${
-                  categoriaSeleccionada === cat
-                    ? 'bg-brand-dark text-white shadow-md shadow-brand-dark/10'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                key={categoria}
+                type="button"
+                onClick={() => setCategoriaSeleccionada(categoria)}
+                aria-pressed={activa}
+                className={`h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-sm transition ${
+                  activa
+                    ? 'bg-brand-dark font-bold text-white'
+                    : 'border border-[#D5DFEA] bg-white font-semibold text-[#22384F] hover:border-brand-blue'
                 }`}
               >
-                {cat}
+                {categoria}
               </button>
-            ))}
-          </div>
-
-          {/* Flecha derecha — solo desktop */}
-          <button
-            onClick={() => scrollear('derecha')}
-            disabled={!puedeDerecha}
-            className={`hidden md:flex shrink-0 items-center justify-center w-8 h-8 rounded-full border border-gray-200 bg-white shadow-sm transition
-              ${puedeDerecha ? 'text-brand-dark hover:bg-gray-50 hover:border-brand-blue' : 'text-gray-300 cursor-default'}`}
-            aria-label="Desplazar categorías a la derecha"
-          >
-            ›
-          </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* LISTADO DE PRODUCTOS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {productosFiltrados.length === 0 ? (
-          <div className="col-span-full bg-white border border-gray-200/60 rounded-2xl p-12 text-center text-gray-400">
-            No se encontraron productos que coincidan con la búsqueda.
-          </div>
-        ) : (
-          productosFiltrados.map((producto) => {
-            const precioFinal = precioSegunLista(producto, listaActual);
-            const cantidadEnCarrito = obtenerCantidadEnCarrito(producto.id);
-
-            return (
-              <div
-                key={producto.id}
-                className="bg-white border border-gray-200/60 rounded-xl p-4 flex items-center gap-4 hover:shadow-md hover:border-gray-300/80 transition-all duration-200 relative overflow-hidden"
-              >
-                {/* Imagen */}
-                <div className="w-20 h-20 bg-gray-100 rounded-xl shrink-0 overflow-hidden border border-gray-100 flex items-center justify-center text-2xl relative">
-                  <ImagenProductoR2 url={urlsImagenes[producto.imagen_url]} nombre={producto.nombre} />
-                </div>
-
-                {/* Info */}
-                <div className="grow min-w-0">
-                  <div className="flex items-start justify-between gap-1">
-                    <h4 className="font-bold text-brand-dark text-base truncate leading-tight">
-                      {producto.nombre}
-                    </h4>
-                  </div>
-                  <p className="text-xs text-brand-blue font-black tracking-wide uppercase mt-0.5">
-                    {producto.marca}
-                  </p>
-                  {producto.informacion_adicional && (
-                    <span className="inline-block bg-green-50 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded mt-1.5 border border-green-100">
-                      {producto.informacion_adicional}
-                    </span>
-                  )}
-                  <p className="text-xs text-gray-400 mt-2 font-medium">
-                    Venta por <span className="text-gray-600 font-semibold">{producto.unidad_medida}</span>
-                  </p>
-                </div>
-
-                {/* Precio y controles */}
-                <div className="flex flex-col items-end justify-between h-full min-w-30 gap-3">
-                  <div className="text-right">
-                    <span className="text-[9px] text-gray-400 block font-bold uppercase tracking-wider">
-                      Precio por {producto.unidad_medida}
-                    </span>
-                    <span className="text-xl font-black text-brand-dark">
-                      ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </span>
-
-                    {/* Estimado para horma y pieza — mismo cálculo que usa el carrito */}
-                    {esVentaPorPeso(producto) && (
-                        <span className="block text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 border border-amber-100">
-                          Aprox: ${calcularPrecioAplicado(producto, listaActual).toLocaleString('es-AR')}
-                          {' '}x {producto.unidad_medida} ({pesoParaEstimar(producto)}kg)
-                        </span>
-                    )}
-
-                    {/* Estimado para productos vendidos por kilo con peso variable */}
-                    {producto.unidad_medida.toLowerCase() === 'kilo' &&
-                      producto.peso_estimado && (
-                        <span className="block text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 border border-amber-100">
-                          Aprox: ${(precioFinal * producto.peso_estimado).toLocaleString('es-AR')} 
-                          {' '}x pieza ({producto.peso_estimado}kg)
-                        </span>
-                    )}
-                  </div>
-
-                  {cantidadEnCarrito === 0 ? (
-                    <button
-                      onClick={() => agregarAlCarrito(producto, 1)}
-                      className="bg-brand-blue text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-brand-dark active:scale-[0.97] transition-all flex items-center gap-1 shadow-md shadow-brand-blue/10 uppercase tracking-wider"
-                    >
-                      <span>+</span> Agregar {producto.unidad_medida.toLowerCase() === 'horma' ? 'Horma' : 'U.'}
-                    </button>
-                  ) : (
-                    <div className="flex items-center bg-gray-100 rounded-xl border border-gray-200 p-0.5 shadow-inner">
-                      <button
-                        onClick={() => actualizarCantidad(producto.id, cantidadEnCarrito - 1)}
-                        className="w-8 h-8 flex items-center justify-center font-black text-gray-600 hover:bg-white rounded-lg transition"
-                      >
-                        -
-                      </button>
-                      <span className="w-8 text-center font-mono font-bold text-sm text-brand-dark">
-                        {cantidadEnCarrito}
-                      </span>
-                      <button
-                        onClick={() => actualizarCantidad(producto.id, cantidadEnCarrito + 1)}
-                        className="w-8 h-8 flex items-center justify-center font-black text-gray-600 hover:bg-white rounded-lg transition"
-                      >
-                        +
-                      </button>
+      <div className="mx-auto max-w-5xl pb-28 md:pb-12">
+        {/* Lo que siempre pedís */}
+        {!filtrando && frecuentes.length > 0 && (
+          <section className="flex flex-col gap-2.5 pb-2 pt-1" aria-labelledby="titulo-frecuentes">
+            <h2 id="titulo-frecuentes" className="px-4 text-[17px] font-extrabold text-brand-dark">
+              Lo que siempre pedís
+            </h2>
+            <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 scrollbar-none">
+              {frecuentes.map((producto) => {
+                const enCarrito = cantidades.get(producto.id) ?? 0;
+                return (
+                  <div
+                    key={producto.id}
+                    className="flex w-[148px] shrink-0 flex-col overflow-hidden rounded-[14px] border border-brand-line bg-white"
+                  >
+                    <div className="relative h-[76px]">
+                      <ImagenProducto url={urlsImagenes[producto.imagen_url]} nombre={producto.nombre} sizes="148px" />
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })
+                    <div className="flex flex-1 flex-col justify-between gap-2 p-2.5">
+                      <p className="line-clamp-2 text-[13px] font-bold leading-snug text-brand-ink">{producto.nombre}</p>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-sm font-extrabold text-brand-ink">
+                          {formatearPrecio(precioSegunLista(producto, lista))}
+                          <span className="text-[11px] font-semibold text-brand-muted"> {sufijoPrecio(producto.unidad_medida)}</span>
+                        </span>
+                        {enCarrito > 0 ? (
+                          <span
+                            className="flex h-11 min-w-11 items-center justify-center gap-1 rounded-xl bg-brand-soft px-2 text-sm font-extrabold text-brand-dark"
+                            aria-label={`${enCarrito} en el carrito`}
+                          >
+                            <Check className="size-4" strokeWidth={2.5} aria-hidden="true" />
+                            {enCarrito}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => agregar(producto)}
+                            aria-label={`Agregar ${producto.nombre}`}
+                            className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-dark text-white transition active:scale-95"
+                          >
+                            <Plus className="size-5" strokeWidth={2.5} aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
+
+        {/* Listado */}
+        <section className="flex flex-col gap-2.5 px-4 pt-3" aria-labelledby="titulo-listado">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="titulo-listado" className="text-[17px] font-extrabold text-brand-dark">
+              {categoriaSeleccionada === 'Todos' ? 'Todos los productos' : categoriaSeleccionada}
+            </h2>
+            {!cargando && (
+              <span className="text-[13px] font-semibold text-brand-muted">
+                {productosFiltrados.length} {productosFiltrados.length === 1 ? 'producto' : 'productos'}
+              </span>
+            )}
+          </div>
+
+          {cargando ? (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2" aria-busy="true" aria-label="Cargando productos">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex animate-pulse flex-col gap-3 rounded-2xl border border-brand-line bg-white p-3.5">
+                  <div className="flex gap-3">
+                    <div className="size-[76px] rounded-xl bg-[#EAF0F6]" />
+                    <div className="flex flex-1 flex-col gap-2 pt-1">
+                      <div className="h-4 w-3/4 rounded bg-[#EAF0F6]" />
+                      <div className="h-3 w-1/3 rounded bg-[#EAF0F6]" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-[#EEF2F7] pt-3">
+                    <div className="h-6 w-24 rounded bg-[#EAF0F6]" />
+                    <div className="h-11 w-32 rounded-xl bg-[#EAF0F6]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : productosFiltrados.length === 0 ? (
+            <div className="rounded-2xl border border-brand-line bg-white px-6 py-12 text-center">
+              <p className="font-bold text-brand-ink">No encontramos productos</p>
+              <p className="mt-1 text-sm text-brand-muted">
+                {productos.length === 0
+                  ? 'No pudimos cargar el catálogo. Revisá tu conexión y volvé a abrir la página.'
+                  : 'Probá con otra palabra o elegí otra categoría.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {productosFiltrados.map((producto) => (
+                <TarjetaProducto
+                  key={producto.id}
+                  producto={producto}
+                  urlImagen={urlsImagenes[producto.imagen_url]}
+                  lista={lista}
+                  cantidadEnCarrito={cantidades.get(producto.id) ?? 0}
+                  onAgregar={() => agregar(producto)}
+                  onCambiarCantidad={(cantidad) => actualizarCantidad(producto.id, cantidad)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
-    </div>
+    </>
   );
 }

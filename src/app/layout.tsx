@@ -1,9 +1,18 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "../context/CartContext";
 
-const inter = Inter({ subsets: ["latin"] });
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
+
+// Color de la barra del navegador y de la app instalada
+export const viewport: Viewport = {
+  themeColor: "#003057",
+};
 
 export const metadata: Metadata = {
   // Base para resolver las rutas relativas de las imágenes de Open Graph / Twitter
@@ -14,7 +23,14 @@ export const metadata: Metadata = {
   
   // 🌟 Esto controla cómo se ve en buscadores y pestañas
   icons: {
-    icon: '/marini-AZUL.png', // Acordate de tener un favicon en tu carpeta public
+    icon: '/icon-192.png',
+  },
+
+  // Nombre al instalarla en iPhone (Compartir → Agregar a inicio)
+  appleWebApp: {
+    title: 'Marini',
+    capable: true,
+    statusBarStyle: 'default',
   },
 
   // 🌟 Open Graph: Esto controla cómo se ve en WhatsApp, Facebook, etc.
@@ -50,8 +66,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body className={inter.className}>
+    <html lang="es" className={jakarta.variable}>
+      <body className="font-sans antialiased">
         <CartProvider>
           {children}
         </CartProvider>

@@ -1,21 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useCart } from '../context/CartContext';
-import Catalogo from '../components/Catalogo';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
+import { useCart } from '../context/CartContext';
+import Catalogo from './Catalogo';
+import MisPedidos from './MisPedidos';
+import MiCuenta from './MiCuenta';
+import AvisoFlotante from './tienda/AvisoFlotante';
+import { BarraInferior, BarraSuperior, type Vista } from './tienda/Navegacion';
 import { usePrecargaCatalogo } from '../hooks/usePrecargaCatalogo';
+import { useProductosFrecuentes } from '../hooks/useProductosFrecuentes';
 
-const ModalIngresoSinSSR = dynamic(() => import('../components/ModalIngreso'), {
+const ModalIngresoSinSSR = dynamic(() => import('./ModalIngreso'), {
   ssr: false,
 });
 
 const CarritoSidebar = dynamic(() => import('./CarritoSidebar'), {
-  ssr: false,
-});
-
-const HistorialClienteSidebar = dynamic(() => import('./HistorialClienteSidebar'), {
   ssr: false,
 });
 
@@ -45,14 +46,20 @@ function PantallaCarga({
   // Se muestra el que vaya más adelantado: si las fotos llegan rápido, la barra también
   const porcentaje = Math.min(100, Math.round(Math.max(porcentajeImagenes, porcentajeTiempo)));
   return (
-    <div className="fixed inset-0 z-50 bg-brand-light flex flex-col items-center justify-center gap-5 p-6">
-      <Image src="/Marini-AZUL.png" alt="Distribuidora Marini" width={180} height={127} className="object-contain" priority />
-      <span className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin" />
-      <div className="w-56 space-y-2 text-center">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-brand-light p-6">
+      <Image src="/marini-logo-azul.png" alt="Distribuidora Marini" width={200} height={43} priority />
+      <div className="w-56 space-y-2.5 text-center">
         <p className="text-sm font-bold text-brand-dark">Preparando tu catálogo...</p>
-        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className="h-1.5 overflow-hidden rounded-full bg-brand-line"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={porcentaje}
+          aria-label="Cargando catálogo"
+        >
           <div
-            className="h-full bg-brand-blue rounded-full transition-all duration-300"
+            className="h-full rounded-full bg-brand-blue transition-all duration-300"
             style={{ width: `${porcentaje}%` }}
           />
         </div>
@@ -62,19 +69,19 @@ function PantallaCarga({
 }
 
 export default function MainLayout() {
-  const { cliente, cerrarSesion, cart } = useCart();
+  const { cliente, cart } = useCart();
+  const [vista, setVista] = useState<Vista>('catalogo');
   const [carritoAbierto, setCarritoAbierto] = useState(false);
-  const [historialAbierto, setHistorialAbierto] = useState(false);
-  const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
-  const [mounted, setMounted] = useState(false); // ✅ AGREGADO
+  const [mounted, setMounted] = useState(false);
   const [esperaAgotada, setEsperaAgotada] = useState(false);
 
   // Empieza a cargar productos y fotos ya, mientras el cliente escribe su DNI
   const catalogo = usePrecargaCatalogo();
+  const frecuentes = useProductosFrecuentes(cliente?.numero_cliente ?? null, catalogo.productos);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true); // ✅ Solo se ejecuta en el cliente, después de la hidratación
+    setMounted(true); // Solo en el cliente, después de la hidratación
   }, []);
 
   // Si al entrar las fotos todavía no terminaron, esperamos como máximo
@@ -86,17 +93,30 @@ export default function MainLayout() {
     return () => clearTimeout(timer);
   }, [hayCliente, catalogo.imagenesListas]);
 
+  // Al cerrar sesión, el próximo ingreso arranca en el catálogo
+  const [clienteAnterior, setClienteAnterior] = useState(cliente);
+  if (cliente !== clienteAnterior) {
+    setClienteAnterior(cliente);
+    if (!cliente) {
+      setVista('catalogo');
+      setCarritoAbierto(false);
+    }
+  }
+
   const cantidadItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
-  const cActivo = cliente as typeof cliente & { documento?: string; numero_cliente?: string };
+  const cambiarVista = (nueva: Vista) => {
+    setVista(nueva);
+    window.scrollTo({ top: 0 });
+  };
 
-  // ✅ Mientras no se haya montado en el cliente, no renderizamos nada que dependa
+  // Mientras no se haya montado en el cliente, no renderizamos nada que dependa
   // de estado del cliente (cliente, cart). Esto evita el mismatch de hidratación.
   if (!mounted) {
     return null;
   }
 
-  if (cActivo && !catalogo.imagenesListas && !esperaAgotada) {
+  if (cliente && !catalogo.imagenesListas && !esperaAgotada) {
     return (
       <PantallaCarga
         cargadas={catalogo.imagenesCargadas}
@@ -106,158 +126,48 @@ export default function MainLayout() {
     );
   }
 
+  const navegacion = {
+    vista,
+    onCambiarVista: cambiarVista,
+    cantidadCarrito: cantidadItems,
+    onAbrirCarrito: () => setCarritoAbierto(true),
+  };
+
   return (
     <>
-      {/* Modal de entrada (Cargado dinámicamente solo en el cliente) */}
-      <ModalIngresoSinSSR /> 
+      {/* Ingreso con DNI (se muestra mientras no haya cliente) */}
+      <ModalIngresoSinSSR />
 
-      {/* Contenido de la Web (Solo visible si el cliente ya ingresó y estamos en el navegador) */}
-      {cActivo && (
-        <>
-          {/* Navbar */}
-          <nav className="bg-brand-dark text-white sticky top-0 z-40 h-18 shadow-xl border-b border-white/10">
-            <div className="container mx-auto px-4 h-full flex justify-between items-center">
-              
-              {/* Lado izquierdo "LOGO" */}
-              <div className="flex items-center">
-                <Image src="/Marini-BLANCO.png" alt="Logo Marini" height={36} width={150} className="object-contain" />
-              </div>
+      {cliente && (
+        <div className="min-h-screen bg-brand-light">
+          <BarraSuperior {...navegacion} />
 
-              {/* Lado derecho "Escritorio" */}
-              <div className="hidden md:flex items-center gap-4">
-                <div className="text-right border-r border-white/10 pr-4">
-                  <p className="text-xs text-white font-bold">{cActivo.nombre_comercio}</p>
-                  <p className="text-[10px] text-gray-400">ID: {cActivo.documento || cActivo.numero_cliente}</p>
-                </div>
-                
-                <button
-                  onClick={() => setHistorialAbierto(true)}
-                  className="bg-white/5 hover:bg-white/10 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-2 border border-white/10 transition"
-                >
-                  📋 Mis Pedidos
-                </button>
-
-                <button
-                  onClick={() => setCarritoAbierto(true)}
-                  className="bg-white/5 hover:bg-white/10 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-2 border border-white/10 transition relative"
-                >
-                  🛒 Carrito
-                  {cantidadItems > 0 && (
-                    <span className="bg-brand-blue text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">
-                      {cantidadItems}
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  onClick={cerrarSesion}
-                  className="text-xs text-gray-400 hover:text-red-400 font-bold transition"
-                >
-                  Salir
-                </button>
-              </div>
-
-              {/* Lado derecho: Celular */}
-              <div className="md:hidden flex items-center gap-3">
-                {cantidadItems > 0 && (
-                  <button 
-                    onClick={() => setCarritoAbierto(true)}
-                    className="relative p-2 text-brand-blue"
-                  >
-                    🛒
-                    <span className="absolute top-0 right-0 bg-white text-brand-dark w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black border border-brand-dark">
-                      {cantidadItems}
-                    </span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setMenuMovilAbierto(!menuMovilAbierto)}
-                  className="p-2 text-gray-300 text-2xl"
-                >
-                  {menuMovilAbierto ? '✕' : '☰'}
-                </button>
-              </div>
+          <main>
+            {/* El catálogo queda montado para conservar búsqueda y scroll al volver */}
+            <div hidden={vista !== 'catalogo'}>
+              <Catalogo
+                productos={catalogo.productos}
+                urlsImagenes={catalogo.urlsImagenes}
+                cargando={catalogo.cargandoProductos}
+                frecuentes={frecuentes}
+              />
             </div>
-
-            {/* Menú desplegable Mobile */}
-            {menuMovilAbierto && (
-              <div className="md:hidden bg-brand-dark border-t border-white/10 animate-in slide-in-from-top duration-200">
-                <div className="p-5 space-y-4 bg-brand-dark/95 backdrop-blur-md">
-                  {/* Info del Cliente */}
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Comercio Activo</p>
-                    <p className="text-sm font-black text-white">{cActivo.nombre_comercio}</p>
-                    <p className="text-xs text-gray-400">Identificación: {cActivo.documento || cActivo.numero_cliente}</p>
-                  </div>
-
-                  {/* Acciones */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => {
-                        setCarritoAbierto(true);
-                        setMenuMovilAbierto(false);
-                      }}
-                      className="w-full bg-white/5 hover:bg-white/10 text-white py-4 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-1 border border-white/10 transition"
-                    >
-                      <span>🛒 Carrito</span>
-                      {cantidadItems > 0 && <span className="text-[10px] text-brand-blue font-black">{cantidadItems} items</span>}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setHistorialAbierto(true);
-                        setMenuMovilAbierto(false);
-                      }}
-                      className="w-full bg-white/5 hover:bg-white/10 text-white py-4 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-1 border border-white/10 transition"
-                    >
-                      📋 Mis Pedidos
-                    </button>
-                    <button
-                      onClick={cerrarSesion}
-                      className="col-span-2 w-full py-4 text-xs font-bold text-red-400 bg-red-400/5 rounded-xl border border-red-400/10"
-                    >
-                      Cerrar Sesión
-                    </button>
-                  </div>
-                </div>
-              </div>
+            {vista === 'pedidos' && (
+              <MisPedidos productos={catalogo.productos} onAbrirCarrito={() => setCarritoAbierto(true)} />
             )}
-          </nav>
-
-          {/* Cuerpo principal con el Catálogo Mayorista */}
-          <main className="container mx-auto p-4 max-w-5xl mt-4 pb-24">
-            <Catalogo
-              productos={catalogo.productos}
-              urlsImagenes={catalogo.urlsImagenes}
-              cargando={catalogo.cargandoProductos}
-            />
+            {vista === 'cuenta' && <MiCuenta />}
           </main>
 
-          {/* Botón flotante del carrito para mobile */}
-          {cantidadItems > 0 && (
-            <button
-              onClick={() => setCarritoAbierto(true)}
-              className="md:hidden fixed bottom-6 right-6 z-40 bg-brand-blue text-white p-4 rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all border border-white/20 animate-bounce"
-            >
-              <span className="text-xl">🛒</span>
-              <span className="absolute -top-1 -right-1 bg-brand-dark text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 border-white shadow-md">
-                {cantidadItems}
-              </span>
-            </button>
-          )}
+          <BarraInferior {...navegacion} />
 
-          {/* Panel lateral del carrito */}
+          <AvisoFlotante oculto={carritoAbierto} onVerPedido={() => setCarritoAbierto(true)} />
+
           <CarritoSidebar
             isOpen={carritoAbierto}
             onClose={() => setCarritoAbierto(false)}
+            urlsImagenes={catalogo.urlsImagenes}
           />
-
-          {/* Panel lateral de mis pedidos */}
-          <HistorialClienteSidebar
-            isOpen={historialAbierto}
-            onClose={() => setHistorialAbierto(false)}
-          />
-        </>
+        </div>
       )}
     </>
   );

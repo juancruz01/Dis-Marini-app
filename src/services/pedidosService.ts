@@ -24,6 +24,7 @@ export interface ItemConfirmado {
   producto_id: number;
   nombre: string;
   marca: string;
+  unidad_medida: string;
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
@@ -122,6 +123,7 @@ export async function crearPedido(
       producto_id: id,
       nombre: producto.nombre,
       marca: producto.marca,
+      unidad_medida: producto.unidad_medida,
       cantidad,
       precio_unitario: precioUnitario,
       subtotal: redondearCentavos(precioUnitario * cantidad),
