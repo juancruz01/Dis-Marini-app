@@ -19,10 +19,31 @@ const HistorialClienteSidebar = dynamic(() => import('./HistorialClienteSidebar'
   ssr: false,
 });
 
-const ESPERA_MAXIMA_MS = 3000;
+const ESPERA_MAXIMA_MS = 5000;
 
-function PantallaCarga({ cargadas, totales }: { cargadas: number; totales: number }) {
-  const porcentaje = totales > 0 ? Math.round((cargadas / totales) * 100) : 0;
+function PantallaCarga({
+  cargadas,
+  totales,
+  duracionMs,
+}: {
+  cargadas: number;
+  totales: number;
+  duracionMs: number;
+}) {
+  const [transcurridoMs, setTranscurridoMs] = useState(0);
+
+  // Avanza con el tiempo para que la barra nunca se quede quieta: llega al 100%
+  // justo cuando se agota la espera máxima y se muestra el catálogo igual.
+  useEffect(() => {
+    const inicio = Date.now();
+    const intervalo = setInterval(() => setTranscurridoMs(Date.now() - inicio), 100);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  const porcentajeImagenes = totales > 0 ? (cargadas / totales) * 100 : 0;
+  const porcentajeTiempo = (transcurridoMs / duracionMs) * 100;
+  // Se muestra el que vaya más adelantado: si las fotos llegan rápido, la barra también
+  const porcentaje = Math.min(100, Math.round(Math.max(porcentajeImagenes, porcentajeTiempo)));
   return (
     <div className="fixed inset-0 z-50 bg-brand-light flex flex-col items-center justify-center gap-5 p-6">
       <Image src="/Marini-AZUL.png" alt="Distribuidora Marini" width={180} height={127} className="object-contain" priority />
@@ -80,6 +101,7 @@ export default function MainLayout() {
       <PantallaCarga
         cargadas={catalogo.imagenesCargadas}
         totales={catalogo.imagenesTotales}
+        duracionMs={ESPERA_MAXIMA_MS}
       />
     );
   }
