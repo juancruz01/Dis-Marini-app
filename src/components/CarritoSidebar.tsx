@@ -1,54 +1,15 @@
 'use client';
 
-import React, {  useEffect ,useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCart } from '../context/CartContext';
 import Image from 'next/image';
 import ModalCheckout from './ModalCheckout';
-import { getPresignedUrl } from '../services/mediaService';
+import { getPresignedUrls } from '../services/mediaService';
 
-const ImagenCarrito = ({
-  imagenKey,
-  nombre,
-}: {
-  imagenKey: string | null;
-  nombre: string;
-}) => {
-  const placeholder = '/productos/placeholder.svg';
-
-  // 1. Calculamos si el producto tiene una imagen válida de forma síncrona
-  const tieneImagenValida = imagenKey && !imagenKey.includes('placeholder');
-
-  // 2. Si no es válida, el estado inicial ya es el placeholder definitivo. 
-  // Si es válida, arranca en placeholder temporal hasta que resuelva la URL firmada.
-  const [urlFinal, setUrlFinal] = useState(placeholder);
-
-  useEffect(() => {
-    // 🚀 LA CLAVE: Si no es válida, salimos al toque. 
-    // Ya NO llamamos a setUrlFinal(placeholder) acá adentro, evitando el error del linter.
-    if (!tieneImagenValida) {
-      return;
-    }
-
-    let activo = true;
-
-    getPresignedUrl(imagenKey)
-      .then((url) => {
-        if (activo && url) setUrlFinal(url);
-      })
-      .catch((err) => {
-        console.error("Error al obtener URL firmada en carrito:", err);
-        // Si falla la promesa (asíncrono), el linter SÍ te deja usar el setState
-        if (activo) setUrlFinal(placeholder); 
-      });
-
-    return () => {
-      activo = false;
-    };
-  }, [imagenKey, tieneImagenValida]); // Agregamos las dependencias correctas
-
+const ImagenCarrito = ({ url, nombre }: { url: string | undefined; nombre: string }) => {
   return (
     <Image
-      src={urlFinal}
+      src={url ?? '/productos/placeholder.svg'}
       alt={nombre}
       fill
       sizes="56px"
@@ -64,10 +25,30 @@ interface CarritoSidebarProps {
 }
 
 export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps) {
-  const { cart, actualizarCantidad, eliminarDelCarrito, obtenerTotal, cliente } = useCart();
+  const { cart, actualizarCantidad, eliminarDelCarrito, obtenerTotal } = useCart();
   const [checkoutAbierto, setCheckoutAbierto] = useState(false);
+  const [urlsImagenes, setUrlsImagenes] = useState<Record<string, string>>({});
 
-  const estaEnElCliente = typeof window !== 'undefined';
+  // Clave estable de las fotos del carrito: cambiar una cantidad no vuelve a pedirlas
+  const clavesImagenes = cart
+    .map((item) => item.producto.imagen_url)
+    .filter((key) => key && !key.includes('placeholder'))
+    .sort()
+    .join('\n');
+
+  // Una sola llamada para todas las fotos del carrito (ver getPresignedUrls)
+  useEffect(() => {
+    if (!isOpen || !clavesImagenes) return;
+    let activo = true;
+    getPresignedUrls(clavesImagenes.split('\n'))
+      .then((urls) => {
+        if (activo) setUrlsImagenes(urls);
+      })
+      .catch((err) => console.error('Error al obtener URLs firmadas en carrito:', err));
+    return () => {
+      activo = false;
+    };
+  }, [isOpen, clavesImagenes]);
 
   if (!isOpen) return null;
 
@@ -112,7 +93,7 @@ export default function CarritoSidebar({ isOpen, onClose }: CarritoSidebarProps)
                   {/* Miniatura de imagen */}
                   <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shrink-0 relative border border-gray-200">
                     <ImagenCarrito
-                      imagenKey={item.producto.imagen_url}
+                      url={urlsImagenes[item.producto.imagen_url]}
                       nombre={item.producto.nombre}
                     />
                   </div>

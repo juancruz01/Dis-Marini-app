@@ -5,10 +5,11 @@ import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sd
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { requerirSesionAdmin } from '../lib/supabase.server';
 
-// Genera una URL temporal para visualizar la imagen en el catálogo
-export const getPresignedUrl = async (fileKey: string | null): Promise<string> => {
-  if (!fileKey) return '/productos/placeholder.svg';
-  
+const PLACEHOLDER = '/productos/placeholder.svg';
+const MAX_URLS_POR_LLAMADA = 500;
+
+// Genera una URL temporal para visualizar una imagen
+async function firmarUrl(fileKey: string): Promise<string> {
   // Si ya es una URL completa o un placeholder local, la devolvemos directo
   if (fileKey.startsWith('http') || fileKey.startsWith('/')) {
     return fileKey;
@@ -23,8 +24,26 @@ export const getPresignedUrl = async (fileKey: string | null): Promise<string> =
     return await getSignedUrl(r2Client, command, { expiresIn: 3600 });
   } catch (error) {
     console.error('Error generando URL de Cloudflare R2:', error);
-    return '/productos/placeholder.svg';
+    return PLACEHOLDER;
   }
+}
+
+// Firma todas las imágenes de una vez. Next ejecuta las Server Actions de a una
+// por navegador: con una llamada por producto, cualquier otra acción (ej. cancelar
+// un pedido) quedaba esperando detrás de decenas de firmas.
+// Devuelve { key: url }; las keys vacías o inválidas no aparecen (usar placeholder).
+export const getPresignedUrls = async (
+  fileKeys: (string | null)[]
+): Promise<Record<string, string>> => {
+  if (!Array.isArray(fileKeys)) return {};
+
+  const keysUnicas = [
+    ...new Set(fileKeys.filter((k): k is string => typeof k === 'string' && k.length > 0)),
+  ].slice(0, MAX_URLS_POR_LLAMADA);
+
+  // La firma es un cálculo local (no hay request a R2), así que en paralelo es rápido
+  const urls = await Promise.all(keysUnicas.map(firmarUrl));
+  return Object.fromEntries(keysUnicas.map((key, i) => [key, urls[i]]));
 };
 
 // Genera la URL de subida (PUT) para que el Admin suba el archivo

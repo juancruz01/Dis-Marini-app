@@ -11,22 +11,13 @@ import {
   pesoParaEstimar,
 } from '../lib/precios';
 import Image from 'next/image';
-import { getPresignedUrl } from '../services/mediaService';
+import { getPresignedUrls } from '../services/mediaService';
 
-export const ImagenProductoR2 = ({ imagenKey, nombre }: { imagenKey: string | null, nombre: string }) => {
-  const [urlFinal, setUrlFinal] = useState('/productos/placeholder.svg');
-
-  useEffect(() => {
-    let activo = true;
-    getPresignedUrl(imagenKey).then((url) => {
-      if (activo) setUrlFinal(url);
-    });
-    return () => { activo = false; };
-  }, [imagenKey]);
-
+// Las URLs firmadas se piden todas juntas en Catalogo; mientras llegan se ve el placeholder
+const ImagenProductoR2 = ({ url, nombre }: { url: string | undefined, nombre: string }) => {
   return (
     <Image
-      src={urlFinal}
+      src={url ?? '/productos/placeholder.svg'}
       alt={nombre}
       fill
       sizes="80px"
@@ -43,6 +34,7 @@ export default function Catalogo() {
   const [busqueda, setBusqueda] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todos');
   const [categorias, setCategorias] = useState<string[]>([]);
+  const [urlsImagenes, setUrlsImagenes] = useState<Record<string, string>>({});
 
   // ─── Ref y estado para las flechas del carrusel de categorías ────────────
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -85,6 +77,11 @@ export default function Catalogo() {
           setProductos(data);
           const listaCategorias = Array.from(new Set(data.map((p) => p.categoria)));
           setCategorias(['Todos', ...listaCategorias]);
+
+          // Una sola llamada para todas las fotos; no bloquea mostrar el catálogo
+          getPresignedUrls(data.map((p) => p.imagen_url))
+            .then(setUrlsImagenes)
+            .catch((err) => console.error('Error al firmar imágenes del catálogo:', err));
         }
       } catch (err) {
         console.error('Error al cargar productos:', err);
@@ -208,7 +205,7 @@ export default function Catalogo() {
               >
                 {/* Imagen */}
                 <div className="w-20 h-20 bg-gray-100 rounded-xl shrink-0 overflow-hidden border border-gray-100 flex items-center justify-center text-2xl relative">
-                  <ImagenProductoR2 imagenKey={producto.imagen_url} nombre={producto.nombre} />
+                  <ImagenProductoR2 url={urlsImagenes[producto.imagen_url]} nombre={producto.nombre} />
                 </div>
 
                 {/* Info */}
