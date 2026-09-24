@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import Catalogo from '../components/Catalogo';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
+import { usePrecargaCatalogo } from '../hooks/usePrecargaCatalogo';
 
 const ModalIngresoSinSSR = dynamic(() => import('../components/ModalIngreso'), {
   ssr: false,
@@ -18,17 +19,51 @@ const HistorialClienteSidebar = dynamic(() => import('./HistorialClienteSidebar'
   ssr: false,
 });
 
+const ESPERA_MAXIMA_MS = 3000;
+
+function PantallaCarga({ cargadas, totales }: { cargadas: number; totales: number }) {
+  const porcentaje = totales > 0 ? Math.round((cargadas / totales) * 100) : 0;
+  return (
+    <div className="fixed inset-0 z-50 bg-brand-light flex flex-col items-center justify-center gap-5 p-6">
+      <Image src="/Marini-AZUL.png" alt="Distribuidora Marini" width={180} height={127} className="object-contain" priority />
+      <span className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin" />
+      <div className="w-56 space-y-2 text-center">
+        <p className="text-sm font-bold text-brand-dark">Preparando tu catálogo...</p>
+        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-brand-blue rounded-full transition-all duration-300"
+            style={{ width: `${porcentaje}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MainLayout() {
   const { cliente, cerrarSesion, cart } = useCart();
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const [historialAbierto, setHistorialAbierto] = useState(false);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [mounted, setMounted] = useState(false); // ✅ AGREGADO
+  const [esperaAgotada, setEsperaAgotada] = useState(false);
+
+  // Empieza a cargar productos y fotos ya, mientras el cliente escribe su DNI
+  const catalogo = usePrecargaCatalogo();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true); // ✅ Solo se ejecuta en el cliente, después de la hidratación
   }, []);
+
+  // Si al entrar las fotos todavía no terminaron, esperamos como máximo
+  // ESPERA_MAXIMA_MS: con conexión lenta el catálogo se muestra igual.
+  const hayCliente = Boolean(cliente);
+  useEffect(() => {
+    if (!hayCliente || catalogo.imagenesListas) return;
+    const timer = setTimeout(() => setEsperaAgotada(true), ESPERA_MAXIMA_MS);
+    return () => clearTimeout(timer);
+  }, [hayCliente, catalogo.imagenesListas]);
 
   const cantidadItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
@@ -38,6 +73,15 @@ export default function MainLayout() {
   // de estado del cliente (cliente, cart). Esto evita el mismatch de hidratación.
   if (!mounted) {
     return null;
+  }
+
+  if (cActivo && !catalogo.imagenesListas && !esperaAgotada) {
+    return (
+      <PantallaCarga
+        cargadas={catalogo.imagenesCargadas}
+        totales={catalogo.imagenesTotales}
+      />
+    );
   }
 
   return (
@@ -160,7 +204,11 @@ export default function MainLayout() {
 
           {/* Cuerpo principal con el Catálogo Mayorista */}
           <main className="container mx-auto p-4 max-w-5xl mt-4 pb-24">
-            <Catalogo />
+            <Catalogo
+              productos={catalogo.productos}
+              urlsImagenes={catalogo.urlsImagenes}
+              cargando={catalogo.cargandoProductos}
+            />
           </main>
 
           {/* Botón flotante del carrito para mobile */}

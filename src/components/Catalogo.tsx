@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useCart } from '../context/CartContext';
 import type { Producto } from '../context/CartContext';
 import {
@@ -11,9 +10,8 @@ import {
   pesoParaEstimar,
 } from '../lib/precios';
 import Image from 'next/image';
-import { getPresignedUrls } from '../services/mediaService';
 
-// Las URLs firmadas se piden todas juntas en Catalogo; mientras llegan se ve el placeholder
+// Las URLs firmadas llegan precargadas desde MainLayout; si falta alguna se ve el placeholder
 const ImagenProductoR2 = ({ url, nombre }: { url: string | undefined, nombre: string }) => {
   return (
     <Image
@@ -26,15 +24,23 @@ const ImagenProductoR2 = ({ url, nombre }: { url: string | undefined, nombre: st
   );
 };
 
-export default function Catalogo() {
+interface CatalogoProps {
+  productos: Producto[];
+  urlsImagenes: Record<string, string>;
+  cargando: boolean;
+}
+
+// Los datos se cargan en MainLayout (usePrecargaCatalogo) para empezar antes del ingreso
+export default function Catalogo({ productos, urlsImagenes, cargando }: CatalogoProps) {
   const { cliente, agregarAlCarrito, cart, actualizarCantidad } = useCart();
 
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todos');
-  const [categorias, setCategorias] = useState<string[]>([]);
-  const [urlsImagenes, setUrlsImagenes] = useState<Record<string, string>>({});
+
+  const categorias = useMemo(
+    () => ['Todos', ...Array.from(new Set(productos.map((p) => p.categoria)))],
+    [productos]
+  );
 
   // ─── Ref y estado para las flechas del carrusel de categorías ────────────
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,36 +67,6 @@ export default function Catalogo() {
     if (!el) return;
     el.scrollBy({ left: dir === 'derecha' ? 200 : -200, behavior: 'smooth' });
   };
-
-  useEffect(() => {
-    async function cargarProductos() {
-      try {
-        const { data, error } = await supabase
-          .from('productos')
-          .select('*')
-          .eq('stock_disponible', true)
-          .order('nombre', { ascending: true });
-
-        if (error) throw error;
-
-        if (data) {
-          setProductos(data);
-          const listaCategorias = Array.from(new Set(data.map((p) => p.categoria)));
-          setCategorias(['Todos', ...listaCategorias]);
-
-          // Una sola llamada para todas las fotos; no bloquea mostrar el catálogo
-          getPresignedUrls(data.map((p) => p.imagen_url))
-            .then(setUrlsImagenes)
-            .catch((err) => console.error('Error al firmar imágenes del catálogo:', err));
-        }
-      } catch (err) {
-        console.error('Error al cargar productos:', err);
-      } finally {
-        setCargando(false);
-      }
-    }
-    cargarProductos();
-  }, []);
 
   // Recalcular flechas cuando cambian las categorías
   useEffect(() => {
