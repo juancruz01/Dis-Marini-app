@@ -15,16 +15,15 @@
 -- - La lectura (catálogo, login por DNI, "Mis pedidos") sigue igual por ahora.
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- 1. Pedidos: ya no se pueden crear, modificar ni borrar desde el navegador
-revoke insert, update, delete on public.pedidos      from anon;
-revoke insert, update, delete on public.items_pedido from anon;
-
--- 2. Catálogo y clientes: solo el admin (authenticated) los modifica
-revoke insert, update, delete on public.productos from anon;
-revoke insert, update, delete on public.clientes  from anon;
+-- anon queda solo con lectura. Se quita todo (incluido TRUNCATE, que saltea RLS,
+-- y TRIGGER/REFERENCES que Supabase concede por defecto) y se devuelve SELECT.
+-- - pedidos / items_pedido: los crea y cancela el servidor
+-- - productos / clientes: solo el admin (authenticated) los modifica
+revoke all on public.pedidos, public.items_pedido, public.productos, public.clientes from anon;
+grant select on public.pedidos, public.items_pedido, public.productos, public.clientes to anon;
 
 -- ─── Verificación ───────────────────────────────────────────────────────────
--- Debería devolver solo filas con privilege_type = SELECT (o ninguna).
+-- Debería devolver exactamente 4 filas, todas con privilege_type = SELECT.
 select table_name, privilege_type
 from information_schema.role_table_grants
 where grantee = 'anon'
